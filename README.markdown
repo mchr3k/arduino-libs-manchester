@@ -15,11 +15,21 @@ Getting started on Arduino
     
 3) Modify your setup() method.
 
-    #define TxPin 4 //the digital pin to use to transmit data
+For receiving data:
+
+    #define TxPin 4
     void setup()
     {
-      // Prepare for Manchester RF
       MANCHESTER.SetTxPin(TxPin);
+    }
+
+For sending data:
+
+    #define RxPin 4
+    void setup() 
+    {  
+      MANCHESTER.SetRxPin(RxPin);
+      MANCHESTER.SetTimeOut(1000);
     }
 
 4) Modify your main code.
