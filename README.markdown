@@ -1,5 +1,7 @@
 This is a Manchester encoding RF library which works on Arduino and ATTiny.
 
+Warning: This lib has only been tested with Arduino IDE 0022.
+
 Getting started on Arduino
 ------
 
