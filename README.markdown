@@ -62,3 +62,9 @@ Getting started on ATtiny85
 This is broadly the same as on Arduino with one extra step. You need to download the [ATtiny hardware files](https://github.com/downloads/mchr3k/arduino-libs-manchester/attiny45_85.zip). These should be unzipped into the following location.
 
     workspace_root/hardware/attiny45_85
+
+Credits
+------
+
+* Library originally from [carl47](http://arduino.cc/forum/index.php?action=profile;u=14566) on [this thread](http://arduino.cc/forum/index.php/topic,63755.0.html)
+* Contibutions from [mchr3k](http://mchr3k-arduino.blogspot.com/) and [Mike](https://github.com/MichaelBell/Arduino-sketches)
