@@ -67,4 +67,4 @@ Credits
 ------
 
 * Library originally from [carl47](http://arduino.cc/forum/index.php?action=profile;u=14566) on [this thread](http://arduino.cc/forum/index.php/topic,63755.0.html)
-* Contibutions from [mchr3k](http://mchr3k-arduino.blogspot.com/) and [Mike](https://github.com/MichaelBell/Arduino-sketches)
+* Contributions from [mchr3k](http://mchr3k-arduino.blogspot.com/) and [Mike](https://github.com/MichaelBell/Arduino-sketches)
