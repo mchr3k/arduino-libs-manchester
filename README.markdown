@@ -15,20 +15,37 @@ Getting started on Arduino
     
 3) Modify your setup() method.
 
-For receiving data:
+For receiving 16 bits of data at a time:
 
-    #define TxPin 4
     void setup()
     {
-      MANCHESTER.SetTxPin(TxPin);
+      // Set digital TX pin
+      MANRX_SetRxPin(4);
+      // Prepare interrupts
+      MANRX_SetupReceive();
+      // Begin receiving data
+      MANRX_BeginReceive();
     }
 
+For receiving arrays of 8 bit values:
+    
+    unsigned char bufferSize = 10;
+    unsigned char bufferData[bufferSize];
+    void setup()
+    {
+      // Set digital TX pin
+      MANRX_SetRxPin(4);
+      // Prepare interrupts
+      MANRX_SetupReceive();
+      // Begin receiving data
+      MANRX_BeginReceiveBytes(bufferSize, bufferData);
+    }
+    
 For sending data:
 
-    #define RxPin 4
     void setup() 
     {  
-      MANCHESTER.SetRxPin(RxPin);
+      MANCHESTER.SetRxPin(4);
       MANCHESTER.SetTimeOut(1000);
     }
 
@@ -49,12 +66,22 @@ Sending an array of 8 bit values:
     
 Receive 16 bits of data:
 
-    unsigned int data = MANCHESTER.Receive();
+    if (MANRX_ReceiveComplete())
+    {
+      unsigned int data = MANRX_GetMessage();
+      MANRX_BeginReceive();
+      // Handle data...
+    }
     
 Receive an array of 8 bit values:
 
-    char[] data = new char[3];
-    MANCHESTER.ReceiveBytes(3, &data);
+    if (MANRX_ReceiveComplete())
+    {
+      unsigned char receivedSize = 0;
+      MANRX_GetMessageBytes(&receivedSize, &bufferData);
+      // Handle/copy data...
+      MANRX_BeginReceiveBytes(bufferSize, bufferData);
+    }
     
 Getting started on ATtiny85
 ------
