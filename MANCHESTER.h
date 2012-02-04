@@ -30,8 +30,6 @@ The actual data rate is then 500 bits/s.
 #define TxDefault 4  //the digital pin to use to transmit data
 #define pulse 1000 //the individual transmit pulse width in msec
 
-#define RxDefault 4  //default rx is 4
-
 /*
 Timer 2 in the ATMega328 and Timer 1 in a ATtiny85 is used to find the time between 
 each transition coming from the demodulation circuit.
@@ -44,6 +42,12 @@ With an error allowance of 22.5 usec we get the following:
 #define MaxCount 85  //pulse higher count limit on capture
 #define MinLongCount 103  //pulse lower count on double pulse
 #define MaxLongCount 147  //pulse higher count on double pulse
+
+#define RX_MODE_PRE  0
+#define RX_MODE_SYNC 1
+#define RX_MODE_DATA 2
+#define RX_MODE_MSG  3
+#define RX_MODE_IDLE 4
 
 #define TimeOutDefault -1  //the timeout in msec default blocks
 
@@ -61,25 +65,42 @@ class MANCHESTERClass
     void SetTxPin(char pin); //set the arduino digital pin for transmit. default 4.
     void Transmit(unsigned int data);  //transmit 16 bits of data
     void TransmitBytes(unsigned char numBytes, unsigned char *data); // transmit a byte array
-    void SetRxPin(char pin);  //set the arduino digital pin for receive. default 4.
-    unsigned int Receive(void);  //receive 16 bits of data. 0 if times out.
-    unsigned char ReceiveBytes(unsigned char maxBytes, unsigned char *data); // receive a byte array
-    unsigned char ReceivedTimeout(void); //whether the receive timed out
-    void SetTimeOut(unsigned int timeout); //set timeout in ms. default blocks.
-    void AddManBit(unsigned int *manBits, unsigned char *numMB,
-                   unsigned char *curByte, unsigned char *data,
-                   unsigned char bit);
     
   private:
     void sendzero(void);
     void sendone(void);
-    unsigned char  RxPin;
     unsigned char  TxPin;
-    unsigned int  TimeOut;
     unsigned long lastSend;
-    unsigned char wasTimeout;
-   
 };//end of class MANCHESTER
+
+// Cant really do this as a real C++ class, since we need to have 
+// an ISR
+extern "C"
+{
+    //set the arduino digital pin for receive. default 4.
+    extern void MANRX_SetRxPin(char pin);
+    
+    //begin the timer used to receive data
+    extern void MANRX_SetupReceive();
+    
+    // begin receiving 16 bits
+    extern void MANRX_BeginReceive(void);
+    
+    // begin receiving a byte array   
+    extern void MANRX_BeginReceiveBytes(unsigned char maxBytes, unsigned char *data);
+    
+    // true if a complete message is ready
+    extern boolean MANRX_ReceiveComplete();
+    
+    // fetch the received message
+    extern unsigned int MANRX_GetMessage();
+    
+    // fetch the received message
+    extern void MANRX_GetMessageBytes(unsigned char *rcvdBytes, unsigned char **data);
+    
+    // stop receiving data
+    extern void MANRX_StopReceive(void);
+}
 
 extern MANCHESTERClass MANCHESTER;
 

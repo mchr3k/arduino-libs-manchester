@@ -32,55 +32,18 @@ MANCHESTERClass::MANCHESTERClass()  //constructor
 {
   TxPin = TxDefault;
   pinMode(TxPin, OUTPUT);      // sets the digital pin 4 default as output 
-  RxPin = RxDefault;  //sets the digital pin 4 default as input 
-  pinMode(RxPin, INPUT);      // default digital pin as output
-  TimeOut = TimeOutDefault; //default is to block
-
-  #if defined( __AVR_ATtinyX5__ )
-    #define TimerCount TCNT1   //ATtiny85 timer 1  
-  #else
-    //ATMega328 timer 2
-    #define TimerCount TCNT2   //ATMega328 timer 2
-    TCCR2A = 0x00;
-    TCCR2B = 0x06; //counts every 16 usec with 16 Mhz clock
-    TIMSK2 = 0x00;
-  #endif   
 }//end of constructor
 
-unsigned char MANCHESTERClass::ReceivedTimeout(void)
+void MANCHESTERClass::SetTxPin(char pin)
 {
-  return wasTimeout;
-}
+  TxPin = pin;      // user sets the digital pin as output
+  pinMode(TxPin, OUTPUT);      // sets the digital pin 4 default as output   
+}//end of set transmit pin	
 
-/*
-Record a new received Manchester bit.  If we've now received 16 Manchester bits,
-spit a new decoded byte out into the received data.
-*/
-void MANCHESTERClass::AddManBit(unsigned int *manBits, unsigned char *numMB, 
-                                unsigned char *curByte, unsigned char *data, 
-                                unsigned char bit)
+void MANCHESTERClass::Transmit(unsigned int data)
 {
-  *manBits <<= 1;
-  *manBits |= bit;
-  (*numMB)++;
-  if (*numMB == 16)
-  {
-    unsigned char newData = 0;
-
-    for (char i = 0; i < 8; i++)
-    {
-      // ManBits holds 16 bits of manchester data
-      // 1 = LO,HI
-      // 0 = HI,LO
-      // We can decode each bit by looking at the bottom bit of each pair.
-      newData <<= 1;
-      newData |= (*manBits & 1); // store the one
-      *manBits = *manBits >> 2; //get next data bit    
-    }
-    data[*curByte] = newData;
-    (*curByte)++;
-    *numMB = 0;
-  }
+  unsigned char byteData[2] = {data >> 8, data & 0xFF};
+  TransmitBytes(2, byteData);
 }
 
 /*
@@ -100,208 +63,6 @@ the transmit level.
 The receiver waits until we have at least 10 10's and then a start pulse 01.
 The receiver is then operating correctly and we have locked onto the transmission.
 */
-unsigned int MANCHESTERClass::Receive(void)
-{
-  unsigned char data[2];
-  unsigned char rcvBytes;
-
-  rcvBytes = ReceiveBytes(2, data);
-  if (rcvBytes != 2)
-      return 0;
-  return (((int)data[0]) << 8) | (int)data[1];
-}
-
-unsigned char MANCHESTERClass::ReceiveBytes(unsigned char maxBytes, unsigned char *data)
-{
-  #if defined( __AVR_ATtinyX5__ )
-    TCCR1 = 0x08;  //counts every 16 usec with 8Mhz clock
-    TIMSK = 0;
-  #endif
-
-  unsigned long timeoutstart = millis();
-  unsigned char curByte = 0;
-  wasTimeout = 0;
-
-  // we keep looking at the receiver output for a transmission
-  for(;;)
-  {
-    unsigned char countlow = 0;
-    unsigned char counthigh = 0;
-
-    // Assume no lock until we get the correct preamble
-    boolean locked = false;
-
-    // transmitter sends:
-    // - 14x 0's
-    // - 1x  1
-    // - 16x <data>
-    // - 2x  0
-    //
-    // we lock onto 10x0 followed by 1x1.
-    //
-    // having a lock sequence shorter than the data means
-    // we could lock onto the data if we are unlucky. However
-    // we can add reliability using an extra layer on top of
-    // this code.
-
-    // The preamble (14x0, 1x1) is received as follows.
-    // (0x10),HI,LO,HI,LO,HI,LO,HI,LO,LO,HI
-
-    // The following loop attempts to sync on the regular transitions
-    // and then detect the long low.
-
-    // wait until RX 1
-    while(digitalRead(RxPin) == 0);
-
-    // start timing
-    TimerCount = 0;
-
-    // Each loop detects HI->LO and then LO->HI
-    // We time the duration of the HI and the duration of the LO
-    // We check the duration to ensure the transition time
-    // was as expected.
-    for(int i = 0; i < 16; i++)  //check at least 32 pulses
-    {
-      // wait until RX 0
-      while(digitalRead(RxPin) != 0)
-        counthigh = TimerCount;  //at this time count is still high
-      TimerCount = 0;
-
-      if((counthigh < MinCount) || (counthigh > MaxCount))
-      {
-        // Transition was too slow/fast
-        locked = false;  
-        break; //this cant be a valid pulse
-      }//end of not valid
-
-      // wait until RX 1
-      while(digitalRead(RxPin) == 0)
-        countlow = TimerCount;  //at this time count is still low
-      TimerCount = 0;
-
-      // Note on the 10th or later time through the loop
-      // we are looking for a long low count.
-      if ((countlow < MinCount) || 
-          ((i < 10) && (countlow > MaxCount)) ||
-          (countlow > MaxLongCount))
-      {
-        // Transition was too slow/fast
-        locked = false;  
-        break; //this cant be a valid pulse
-      }//end of not valid
-
-      if((i > 9) && (countlow > MinLongCount))
-      {
-        // We have seen at least 10 regular transitions
-        // Lock sequence ends with 01
-        // This is TX as HI,LO,LO,HI
-        // We have seen a long low - we are now locked!
-        locked = true;
-        break;
-      }
-    }//end of get 10 capture pulses and start pulse
-
-    if(millis() - timeoutstart > TimeOut)
-    {
-      wasTimeout = 1;
-      return 0;  //timed out so return to caller
-    }
-
-    unsigned int manBits = 0; //the received manchester 32 bits
-    unsigned char numMB = 0;  //the number of received manchester bits
-    boolean start = true;  //remember to ignore the start bit is a one
-
-    if(locked)  //have we detected a capture pulse train
-    {
-      // This section reads the raw RX input
-      // It keeps reading data until either we lose the lock (due to the transmitter
-      // stopping, or interference) or we hit the maximum number of bytes the user
-      // wanted.  It then returns all complete bytes that were read.  It's up to the
-      // user to decide what to do if fewer bytes than expected were returned.
-      //
-      // The first manchester bit is the HI from the end of the lock - ignore it
-      // The lock ended with receiving a HI so we know we start with a HI here
-      while (curByte < maxBytes)
-      {
-        if (!start)
-          AddManBit(&manBits, &numMB, &curByte, data, 1);
-        else
-          start = false;
-
-        // wait until RX 0
-        while(digitalRead(RxPin) != 0)
-          counthigh = TimerCount;  //end of count is high
-        TimerCount = 0;
-
-        if((counthigh < MinCount) ||
-           (counthigh > MaxLongCount))
-        {
-          // Interference - give up
-          locked = false;
-          break;
-        }
-
-        if(counthigh > MinLongCount)  //is this a double 1
-        {
-          AddManBit(&manBits, &numMB, &curByte, data, 1);
-        }//end of we have a double 1
-
-        AddManBit(&manBits, &numMB, &curByte, data, 0);
-
-        // wait until RX 1
-        while(digitalRead(RxPin) == 0)
-          countlow = TimerCount;  //end of count is low
-        TimerCount = 0;
-
-        if((countlow < MinCount) ||
-           (countlow > MaxLongCount))
-        {
-          // Interference - give up
-          locked = false;
-          break;
-        }
-        if(countlow > MinLongCount)  //is this a double 0
-        {
-          AddManBit(&manBits, &numMB, &curByte, data, 0);
-        }//end of we have a double 0
-      }//end of read the raw RX input
-
-      if (curByte > 0)
-      {
-        // We successfully received at least one byte, 
-        // stop looping and return it to the user
-        break;
-      }
-    }//end of its locked
-  }//end of look until find data or timeout
-
-  // Return number of bytes received.
-  return curByte;
-}//end of receive data
-
-void MANCHESTERClass::SetTimeOut(unsigned int timeout)
-{
-  TimeOut = timeout;  //user sets timeout 
-}//end of user sets timeout
-
-void MANCHESTERClass::SetRxPin(char pin)
-{
-  RxPin = pin;
-  pinMode(pin, INPUT);      // user sets the digital pin as input  
-}//end of set transmit pin	
-
-void MANCHESTERClass::SetTxPin(char pin)
-{
-  TxPin = pin;      // user sets the digital pin as output
-  pinMode(TxPin, OUTPUT);      // sets the digital pin 4 default as output   
-}//end of set transmit pin	
-
-void MANCHESTERClass::Transmit(unsigned int data)
-{
-  unsigned char byteData[2] = {data >> 8, data & 0xFF};
-  TransmitBytes(2, byteData);
-}
-
 void MANCHESTERClass::TransmitBytes(unsigned char numBytes, unsigned char *data)
 {
   // Setup last send time so we start transmitting in 10us
@@ -354,5 +115,241 @@ void MANCHESTERClass::sendone(void)
  
   lastSend = micros();
 }//end of send one
+
+static char RxPin = 4;
+
+static int rx_sample = 0;
+static int rx_last_sample = 0;
+static uint8_t rx_count = 0;
+static uint8_t rx_sync_count = 0;
+static uint8_t rx_mode = RX_MODE_IDLE;
+
+static unsigned int rx_manBits = 0; //the received manchester 32 bits
+static unsigned char rx_numMB = 0;  //the number of received manchester bits
+static unsigned char rx_curByte = 0;
+
+static unsigned char rx_maxBytes = 2;
+static unsigned char rx_default_data[2];
+static unsigned char* rx_data = rx_default_data;
+
+void MANRX_SetupReceive()
+{  
+  pinMode(RxPin, INPUT);
+/*
+This code gives a basic data rate as 1000 bits/s. In manchester encoding we send 1 0 for a data bit 0.
+We send 0 1 for a data bit 1. This ensures an average over time of a fixed DC level in the TX/RX.
+This is required by the ASK RF link system to ensure its correct operation.
+The actual data rate is then 500 bits/s.
+
+The timing of these bits are as follows.
+
+uS in a second / 1,000 bits/second
+     1,000,000 / 1,000 = 1,000uS/bit
+*/
+#if defined( __AVR_ATtinyX5__ )
+/*
+Timer 1 is used with a ATtiny85. The base clock is 8MHz. We use a 1/128 clock divider
+which gives 16uS per count.
+
+  1 / (8,000,000 / 128) = 16uS/count
+  1,000 / 16 = 62.5 counts/bit
+
+At this rate we expect 62.5 counts/bit.
+
+http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
+*/
+  TCCR1 = _BV(CTC1) | _BV(CS13); //counts every 16 usec with 8Mhz clock
+  OCR1A = 4; // interrupt every 5 counts (0->4)
+  TIMSK = _BV(OCIE1A); // Turn on interrupt
+  TCNT1 = 0; // Set counter to 0
+#else
+/*
+Timer 2 is used with a ATMega328. The base clock is 16MHz. We use a 1/256 clock divider
+which gives 16uS per count.
+
+  1 / (16,000,000 / 256) = 16uS/count
+  1,000 / 16 = 62.5 counts/bit
+
+At this rate we expect 62.5 counts/bit.
+
+http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
+*/
+  TCCR2A = _BV(WGM21); // reset counter on match
+  TCCR2B = _BV(CS22) | _BV(CS21); //counts every 16 usec with 16 Mhz clock
+  OCR2A = 4; // interrupt every 5 counts (0->4)
+  TIMSK2 = _BV(OCIE2A); // Turn on interrupt
+  TCNT2 = 0; // Set counter to 0
+#endif
+}
+
+void MANRX_BeginReceive(void)
+{
+  rx_maxBytes = 2;
+  rx_data = rx_default_data;
+  rx_mode = RX_MODE_PRE;
+}
+
+void MANRX_BeginReceiveBytes(unsigned char maxBytes, unsigned char *data)
+{
+  rx_maxBytes = maxBytes;
+  rx_data = data;
+  rx_mode = RX_MODE_PRE;  
+}
+
+void MANRX_StopReceive(void)
+{
+  rx_mode = RX_MODE_IDLE;
+}
+
+boolean MANRX_ReceiveComplete(void)
+{
+  return (rx_mode == RX_MODE_MSG);
+}
+
+unsigned int MANRX_GetMessage(void)
+{
+  return (((int)rx_data[0]) << 8) | (int)rx_data[1];
+}
+
+void MANRX_GetMessageBytes(unsigned char *rcvdBytes, unsigned char **data)
+{
+  *rcvdBytes = rx_curByte;
+  *data = rx_data;
+}
+
+void MANRX_SetRxPin(char pin)
+{
+  RxPin = pin;
+  pinMode(RxPin, INPUT);
+}//end of set transmit pin	
+
+void AddManBit(unsigned int *manBits, unsigned char *numMB, 
+               unsigned char *curByte, unsigned char *data, 
+               unsigned char bit)
+{
+  *manBits <<= 1;
+  *manBits |= bit;
+  (*numMB)++;
+  if (*numMB == 16)
+  {
+    unsigned char newData = 0;
+
+    for (char i = 0; i < 8; i++)
+    {
+      // ManBits holds 16 bits of manchester data
+      // 1 = LO,HI
+      // 0 = HI,LO
+      // We can decode each bit by looking at the bottom bit of each pair.
+      newData <<= 1;
+      newData |= (*manBits & 1); // store the one
+      *manBits = *manBits >> 2; //get next data bit    
+    }
+    data[*curByte] = newData;
+    (*curByte)++;
+    *numMB = 0;
+  }
+}
+
+ISR(TIMER2_COMPA_vect)
+{
+  if (rx_mode < 3)
+  {
+    // Increment counter  
+    rx_count += 5;
+    
+    // Check for value change
+    rx_sample = digitalRead(RxPin);
+    boolean transition = (rx_sample != rx_last_sample);
+  
+    if (rx_mode == RX_MODE_PRE)
+    {
+      // Wait for first transition to HIGH
+      if (transition && (rx_sample == 1))
+      {
+        rx_count = 0;
+        rx_sync_count = 0;
+        rx_mode = RX_MODE_SYNC;
+      }
+    }
+    else if (rx_mode == RX_MODE_SYNC)
+    {
+      // Initial sync block
+      if (transition)
+      {
+        if(((rx_sync_count < 20) || (rx_last_sample == 1)) && 
+           ((rx_count < MinCount) || (rx_count > MaxCount)))
+        {
+          // First 20 bits and all 1 bits are expected to be regular
+          // Transition was too slow/fast
+          rx_mode = RX_MODE_PRE;
+        }
+        else if((rx_last_sample == 0) &&
+                ((rx_count < MinCount) || (rx_count > MaxLongCount)))
+        {
+          // 0 bits after the 20th bit are allowed to be a double bit
+          // Transition was too slow/fast
+          rx_mode = RX_MODE_PRE;
+        }
+        else
+        {
+          rx_sync_count++;
+          
+          if((rx_last_sample == 0) && 
+             (rx_sync_count >= 20) && 
+             (rx_count > MinLongCount))
+          {
+            // We have seen at least 10 regular transitions
+            // Lock sequence ends with unencoded bits 01
+            // This is encoded and TX as HI,LO,LO,HI
+            // We have seen a long low - we are now locked!
+            rx_mode = RX_MODE_DATA;
+            rx_manBits = 0;
+            rx_numMB = 0;
+            rx_curByte = 0;
+          }
+          else if (rx_sync_count >= 32)
+          {
+            rx_mode = RX_MODE_PRE;
+          }
+          rx_count = 0;
+        }
+      }
+    }
+    else if (rx_mode == RX_MODE_DATA)
+    {
+      // Receive data
+      if (transition)
+      {
+        if((rx_count < MinCount) ||
+           (rx_count > MaxLongCount))
+        {
+          // Interference - give up
+          rx_mode = RX_MODE_PRE;
+        }
+        else
+        {
+          if(rx_count > MinLongCount)  // was the previous bit a double bit?
+          {
+            AddManBit(&rx_manBits, &rx_numMB, &rx_curByte, rx_data, rx_last_sample);
+          }
+          if ((rx_sample == 1) &&
+              (rx_curByte >= rx_maxBytes))
+          {
+            rx_mode = RX_MODE_MSG;
+          }
+          else
+          {
+            // Add the current bit
+            AddManBit(&rx_manBits, &rx_numMB, &rx_curByte, rx_data, rx_sample);          
+            rx_count = 0;
+          }        
+        }
+      }
+    }
+    
+    // Get ready for next loop
+    rx_last_sample = rx_sample;
+  }
+}
 
 MANCHESTERClass MANCHESTER;
