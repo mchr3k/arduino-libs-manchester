@@ -92,7 +92,7 @@ alternative ATtiny implementations is listed on [this site](http://code.google.c
 is where I got the files in tiny.zip).
 These should be unzipped into the following location.
 
-    workspace_root/hardware/attiny45_85
+    workspace_root/hardware/tiny
 
 Credits
 ------
