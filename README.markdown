@@ -1,6 +1,6 @@
 This is a Manchester encoding RF library which works on Arduino and ATTiny.
 
-Warning: This lib has only been tested with Arduino IDE 0022.
+Note: I am currently using this library with IDE 1.0.
 
 Getting started on Arduino
 ------
@@ -86,12 +86,18 @@ Receive an array of 8 bit values:
 Getting started on ATtiny85
 ------
 
-This is broadly the same as on Arduino with one extra step. You need to download the [ATtiny hardware files](https://github.com/downloads/mchr3k/arduino-libs-manchester/attiny45_85.zip). These should be unzipped into the following location.
+This is broadly the same as on Arduino with one extra step. You need to download the 
+[ATtiny hardware files](https://github.com/downloads/mchr3k/arduino-libs-manchester/tiny.zip) (a list of
+alternative ATtiny implementations is listed on [this site](http://code.google.com/p/arduino-tiny/) which
+is where I got the files in tiny.zip).
+These should be unzipped into the following location.
 
     workspace_root/hardware/attiny45_85
 
 Credits
 ------
 
-* Library originally from [carl47](http://arduino.cc/forum/index.php?action=profile;u=14566) on [this thread](http://arduino.cc/forum/index.php/topic,63755.0.html)
-* Contributions from [mchr3k](http://mchr3k-arduino.blogspot.com/) and [Mike](https://github.com/MichaelBell/Arduino-sketches)
+* Library originally from [carl47](http://arduino.cc/forum/index.php?action=profile;u=14566) on 
+[this thread](http://arduino.cc/forum/index.php/topic,63755.0.html)
+* Contributions from [mchr3k](http://mchr3k-arduino.blogspot.com/) and 
+[Mike](https://github.com/MichaelBell/Arduino-sketches)
