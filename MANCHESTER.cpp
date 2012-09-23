@@ -174,8 +174,8 @@ At this rate we expect 62.5 counts/bit.
 
 http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
 */
-  TCCR3A = _BV(WGM31); // reset counter on match
-  TCCR3B = _BV(CS32); //counts every 16 usec with 16 Mhz clock
+  TCCR3A = 0; // reset counter on match
+  TCCR3B = _BV(WGM32) | _BV(CS32); //counts every 16 usec with 16 Mhz clock
   OCR3A = 4; // interrupt every 5 counts (0->4)
   TIFR3 = _BV(OCF3A);   // clear interrupt flag
   TIMSK3 = _BV(OCIE3A); // Turn on interrupt
