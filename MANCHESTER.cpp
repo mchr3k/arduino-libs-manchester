@@ -162,6 +162,24 @@ http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
   OCR1A = 4; // interrupt every 5 counts (0->4)
   TIMSK = _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
+#elif defined(__AVR_ATmega32U4__)
+/*
+Timer 3 is used with a ATMega32U4. The base clock is 16MHz. We use a 1/256 clock divider
+which gives 16uS per count.
+
+  1 / (16,000,000 / 256) = 16uS/count
+  1,000 / 16 = 62.5 counts/bit
+
+At this rate we expect 62.5 counts/bit.
+
+http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
+*/
+  TCCR3A = 0; // reset counter on match
+  TCCR3B = _BV(WGM32) | _BV(CS32); //counts every 16 usec with 16 Mhz clock
+  OCR3A = 4; // interrupt every 5 counts (0->4)
+  TIFR3 = _BV(OCF3A);   // clear interrupt flag
+  TIMSK3 = _BV(OCIE3A); // Turn on interrupt
+  TCNT3 = 0; // Set counter to 0
 #else
 /*
 Timer 2 is used with a ATMega328. The base clock is 16MHz. We use a 1/256 clock divider
@@ -249,8 +267,13 @@ void AddManBit(unsigned int *manBits, unsigned char *numMB,
     *numMB = 0;
   }
 }
-
+#if defined( __AVR_ATtinyX5__ )
+ISR(TIMER1_COMPA_vect)
+#elif defined(__AVR_ATmega32U4__)
+ISR(TIMER3_COMPA_vect)
+#else
 ISR(TIMER2_COMPA_vect)
+#endif
 {
   if (rx_mode < 3)
   {
