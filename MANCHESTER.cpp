@@ -158,8 +158,16 @@ At this rate we expect 62.5 counts/bit.
 
 http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
 */
-  TCCR1 = _BV(CTC1) | _BV(CS13); //counts every 16 usec with 8Mhz clock
-  OCR1A = 4; // interrupt every 5 counts (0->4)
+
+// **** JN *****
+// either we do a smaller time and check the counter more often:
+  TCCR1 = _BV(CTC1) | _BV(CS12);
+  OCR1A = 0; // we're checking every other 
+
+// at a minimum, make sure that the thing actually checks the
+// interrupt with the right value
+  //TCCR1 = _BV(CTC1) | _BV(CS13); //counts every 16 usec with 8Mhz clock
+  //OCR1A = 4; // interrupt every 5 counts (0->4)
   TIMSK = _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
 #elif defined(__AVR_ATmega32U4__)
@@ -194,7 +202,7 @@ http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
 */
   TCCR2A = _BV(WGM21); // reset counter on match
   TCCR2B = _BV(CS22) | _BV(CS21); //counts every 16 usec with 16 Mhz clock
-  OCR2A = 4; // interrupt every 5 counts (0->4)
+  OCR2A = 3; // interrupt every 5 counts (0->4)
   TIMSK2 = _BV(OCIE2A); // Turn on interrupt
   TCNT2 = 0; // Set counter to 0
 #endif
@@ -277,12 +285,19 @@ ISR(TIMER2_COMPA_vect)
 {
   if (rx_mode < 3)
   {
+
     // Increment counter  
     rx_count += 5;
     
     // Check for value change
     rx_sample = digitalRead(RxPin);
+
     boolean transition = (rx_sample != rx_last_sample);
+
+    if(transition)
+    {
+      
+    }
   
     if (rx_mode == RX_MODE_PRE)
     {
@@ -340,6 +355,7 @@ ISR(TIMER2_COMPA_vect)
     }
     else if (rx_mode == RX_MODE_DATA)
     {
+
       // Receive data
       if (transition)
       {
