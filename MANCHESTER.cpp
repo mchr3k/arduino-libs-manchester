@@ -158,7 +158,7 @@ http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
   OCR1A = 0; // interrupt every usec
   TIMSK = _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
-  
+
 #elif defined(__AVR_ATmega32U4__)
 /*
 Timer 3 is used with a ATMega32U4. The base clock is 16MHz. We use a 1/256 clock divider
@@ -282,11 +282,6 @@ ISR(TIMER2_COMPA_vect)
     rx_sample = digitalRead(RxPin);
 
     boolean transition = (rx_sample != rx_last_sample);
-
-    if(transition)
-    {
-      
-    }
   
     if (rx_mode == RX_MODE_PRE)
     {
