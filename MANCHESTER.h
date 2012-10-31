@@ -60,8 +60,6 @@ With an error allowance of 22.5 usec we get the following:
 
 #define TimeOutDefault -1  //the timeout in msec default blocks
 
-#define __AVR_ATtinyX5__
-
 #if defined(ARDUINO) && ARDUINO >= 100
   #include "Arduino.h"
 #else
