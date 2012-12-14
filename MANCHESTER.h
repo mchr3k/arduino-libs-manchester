@@ -38,7 +38,7 @@ The divide ratio is /256 with 16 Mhz the 328 and /128 for the 85 with a 8 Mhz cl
 This gives 16 usec per count. For a normal pulse this is 62.5 counts.
 With an error allowance of 22.5 usec we get the following:
 */
-/
+
 
 #if defined( __AVR_ATtinyX5__ )
     #define MinCount 15  //pulse lower count limit on capture
