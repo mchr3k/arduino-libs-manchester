@@ -148,20 +148,17 @@ uS in a second / 1,000 bits/second
 */
 #if defined( __AVR_ATtinyX5__ )
 /*
-Timer 1 is used with a ATtiny85. The base clock is 8MHz. We use a 1/128 clock divider
-which gives 16uS per count.
-
-  1 / (8,000,000 / 128) = 16uS/count
-  1,000 / 16 = 62.5 counts/bit
-
-At this rate we expect 62.5 counts/bit.
+Timer 1 is used with a ATtiny85. The base clock is 8MHz. We use a 1/8 clock divider
+which gives 1uS per count.
 
 http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
 */
-  TCCR1 = _BV(CTC1) | _BV(CS13); //counts every 16 usec with 8Mhz clock
-  OCR1A = 4; // interrupt every 5 counts (0->4)
+
+  TCCR1 = _BV(CTC1) | _BV(CS12); //counts every usec with an 8Mhz clock
+  OCR1A = 0; // interrupt every usec
   TIMSK = _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
+
 #elif defined(__AVR_ATmega32U4__)
 /*
 Timer 3 is used with a ATMega32U4. The base clock is 16MHz. We use a 1/256 clock divider
@@ -194,7 +191,7 @@ http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
 */
   TCCR2A = _BV(WGM21); // reset counter on match
   TCCR2B = _BV(CS22) | _BV(CS21); //counts every 16 usec with 16 Mhz clock
-  OCR2A = 4; // interrupt every 5 counts (0->4)
+  OCR2A = 5; // interrupt every 5 counts (0->3)
   TIMSK2 = _BV(OCIE2A); // Turn on interrupt
   TCNT2 = 0; // Set counter to 0
 #endif
@@ -277,11 +274,13 @@ ISR(TIMER2_COMPA_vect)
 {
   if (rx_mode < 3)
   {
+
     // Increment counter  
     rx_count += 5;
     
     // Check for value change
     rx_sample = digitalRead(RxPin);
+
     boolean transition = (rx_sample != rx_last_sample);
   
     if (rx_mode == RX_MODE_PRE)
@@ -340,6 +339,7 @@ ISR(TIMER2_COMPA_vect)
     }
     else if (rx_mode == RX_MODE_DATA)
     {
+
       // Receive data
       if (transition)
       {

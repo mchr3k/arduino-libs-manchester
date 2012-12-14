@@ -38,10 +38,19 @@ The divide ratio is /256 with 16 Mhz the 328 and /128 for the 85 with a 8 Mhz cl
 This gives 16 usec per count. For a normal pulse this is 62.5 counts.
 With an error allowance of 22.5 usec we get the following:
 */
-#define MinCount 40  //pulse lower count limit on capture
-#define MaxCount 85  //pulse higher count limit on capture
-#define MinLongCount 103  //pulse lower count on double pulse
-#define MaxLongCount 147  //pulse higher count on double pulse
+
+
+#if defined( __AVR_ATtinyX5__ )
+    #define MinCount 15  //pulse lower count limit on capture
+    #define MaxCount 25  //pulse higher count limit on capture
+    #define MinLongCount 30  //pulse lower count on double pulse
+    #define MaxLongCount 50  //pulse higher count on double pulse
+#else
+    #define MinCount 40  //pulse lower count limit on capture
+    #define MaxCount 85  //pulse higher count limit on capture
+    #define MinLongCount 103  //pulse lower count on double pulse
+    #define MaxLongCount 147  //pulse higher count on double pulse
+#endif
 
 #define RX_MODE_PRE  0
 #define RX_MODE_SYNC 1
