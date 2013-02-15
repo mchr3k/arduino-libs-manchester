@@ -161,7 +161,7 @@ http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
   TCCR1 = _BV(CTC1) | _BV(CS13); //counts every 16 usec with 8Mhz clock
   OCR1C = 4; // Clear TCNT1 every 5 counts (0->4)
   OCR1A = 0; // Trigger interrupt when TCNT1 is reset to 0
-  TIMSK = _BV(OCIE1A); // Turn on interrupt
+  TIMSK |= _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
 #elif defined(__AVR_ATmega32U4__)
 /*
