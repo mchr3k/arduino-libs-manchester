@@ -158,8 +158,22 @@ At this rate we expect 62.5 counts/bit.
 
 http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
 */
-  TCCR1 = _BV(CTC1) | _BV(CS13); //counts every 16 usec with 8Mhz clock
-  OCR1C = 4; // Clear TCNT1 every 5 counts (0->4)
+  #if F_CPU == 8000000UL
+    TCCR1 = _BV(CTC1) | _BV(CS13); // ckdiv 128 = counts every 16 usec with 8Mhz clock
+    OCR1C = 4; // Clear TCNT1 every 5 counts (0->4), causing interrupt at 12.5khz rate
+  #elif F_CPU == 16000000UL
+    TCCR1 = _BV(CTC1) | _BV(CS13) | _BV(CS10); // ckdiv 256 = counts every 16 usec with 16Mhz clock
+    OCR1C = 4; // Clear TCNT1 every 5 counts (0->4), causing interrupt at 12.5khz rate
+  #elif F_CPU == 16500000UL
+    // Digispark and other V-USB-based attiny85 devices need 16.5mhz clock speed, so configure counter
+    // so overflow interrupt fires at same rate on these devices also
+    TCCR1 = _BV(CTC1) | _BV(CS12); // ckdiv 8 = counts every 2.0625 usec with 16.5Mhz clock
+    OCR1C = 164; // Clear TCNT1 every 165 counts (0->164)
+    // results in overflow at rate of 12.5khz, like other supported clock speeds
+  #else
+    #error "Manchester library only supports 8mhz, 16mhz, and 16.5mhz clock speeds on ATtiny85 chip"
+  #endif
+  
   OCR1A = 0; // Trigger interrupt when TCNT1 is reset to 0
   TIMSK |= _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
