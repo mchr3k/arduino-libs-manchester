@@ -163,6 +163,22 @@ http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
   OCR1A = 0; // Trigger interrupt when TCNT1 is reset to 0
   TIMSK |= _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
+
+#elif defined( __AVR_ATtinyX4__ )
+/*
+Timer 1 is used with a ATtiny84. The base clock is 8MHz. We use a 1/64 clock divider
+which gives 8uS per count.
+
+  1 / (8,000,000 / 64) = 8uS/count
+  1,000 / 8 = 125 counts/bit
+
+At this rate we expect 125 counts/bit.
+*/
+  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //counts every 8 usec with 8Mhz clock
+  OCR1A = 9; // interrupt every 10 counts (0->9)
+  TIMSK1 |= _BV(OCIE1A); // Turn on interrupt
+  TCNT1 = 0; // Set counter to 0
+
 #elif defined(__AVR_ATmega32U4__)
 /*
 Timer 3 is used with a ATMega32U4. The base clock is 16MHz. We use a 1/256 clock divider
@@ -270,6 +286,8 @@ void AddManBit(unsigned int *manBits, unsigned char *numMB,
 }
 #if defined( __AVR_ATtinyX5__ )
 ISR(TIMER1_COMPA_vect)
+#elif defined( __AVR_ATtinyX4__ )
+ISR(TIM1_COMPA_vect)
 #elif defined(__AVR_ATmega32U4__)
 ISR(TIMER3_COMPA_vect)
 #else
