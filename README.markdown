@@ -19,7 +19,7 @@ For receiving 16 bits of data at a time:
 
     void setup()
     {
-      // Set digital TX pin
+      // Set digital RX pin
       MANRX_SetRxPin(4);
       // Prepare interrupts
       MANRX_SetupReceive();
@@ -33,7 +33,7 @@ For receiving arrays of 8 bit values:
     unsigned char bufferData[bufferSize];
     void setup()
     {
-      // Set digital TX pin
+      // Set digital RX pin
       MANRX_SetRxPin(4);
       // Prepare interrupts
       MANRX_SetupReceive();
@@ -45,7 +45,7 @@ For sending data:
 
     void setup() 
     {  
-      MANCHESTER.SetRxPin(4);
+      MANCHESTER.SetTxPin(4);
       MANCHESTER.SetTimeOut(1000);
     }
 
