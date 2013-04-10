@@ -46,7 +46,6 @@ For sending data:
     void setup() 
     {  
       MANCHESTER.SetRxPin(4);
-      MANCHESTER.SetTimeOut(1000);
     }
 
 4) Modify your main code.
