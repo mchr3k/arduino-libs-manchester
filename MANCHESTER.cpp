@@ -6,8 +6,8 @@ http://www.atmel.com/dyn/resources/prod_documents/doc9164.pdf
 
 Quotes from the application note:
 
-"Manchester coding states that there will always be a transition of the message signal 
-at the mid-point of the data bit frame. 
+"Manchester coding states that there will always be a transition of the message signal
+at the mid-point of the data bit frame.
 What occurs at the bit edges depends on the state of the previous bit frame and
 does not always produce a transition. A logical “1” is defined as a mid-point transition
 from low to high and a “0” is a mid-point transition from high to low.
@@ -28,17 +28,17 @@ The actual data rate is then 500 bits/s.
 
 #define HALF_BIT_INTERVAL 1000 // microseconds
 
-MANCHESTERClass::MANCHESTERClass()  //constructor
+MANCHESTERClass::MANCHESTERClass() //constructor
 {
   TxPin = TxDefault;
-  pinMode(TxPin, OUTPUT);      // sets the digital pin 4 default as output 
+  pinMode(TxPin, OUTPUT); // sets the digital pin 4 default as output
 }//end of constructor
 
 void MANCHESTERClass::SetTxPin(char pin)
 {
-  TxPin = pin;      // user sets the digital pin as output
-  pinMode(TxPin, OUTPUT);      // sets the digital pin 4 default as output   
-}//end of set transmit pin	
+  TxPin = pin; // user sets the digital pin as output
+  pinMode(TxPin, OUTPUT); // sets the digital pin 4 default as output
+}//end of set transmit pin
 
 void MANCHESTERClass::Transmit(unsigned int data)
 {
@@ -47,7 +47,7 @@ void MANCHESTERClass::Transmit(unsigned int data)
 }
 
 /*
-The 433.92 Mhz receivers have AGC, if no signal is present the gain will be set 
+The 433.92 Mhz receivers have AGC, if no signal is present the gain will be set
 to its highest level.
 
 In this condition it will switch high to low at random intervals due to input noise.
@@ -57,7 +57,7 @@ Any ASK transmission method must first sent a capture signal of 101010........
 When the receiver has adjusted its AGC to the required level for the transmisssion
 the actual data transmission can occur.
 
-We send 14 0's 1010...    It takes 1 to 3 10's for the receiver to adjust to 
+We send 14 0's 1010... It takes 1 to 3 10's for the receiver to adjust to
 the transmit level.
 
 The receiver waits until we have at least 10 10's and then a start pulse 01.
@@ -70,15 +70,15 @@ void MANCHESTERClass::TransmitBytes(unsigned char numBytes, unsigned char *data)
 
   // Send 14 0's
   for( int i = 0; i < 14; i++) //send capture pulses
-    sendzero();  //end of capture pulses
+    sendzero(); //end of capture pulses
  
   // Send a single 1
-  sendone();  //start data pulse
+  sendone(); //start data pulse
  
   // Send the user data
   for (unsigned char i = 0; i < numBytes; i++)
   {
-    unsigned int mask = 0x01; //mask to send bits 
+    unsigned int mask = 0x01; //mask to send bits
     for (char j = 0; j < 8; j++)
     {
       if ((data[i] & mask) == 0)
@@ -91,15 +91,15 @@ void MANCHESTERClass::TransmitBytes(unsigned char numBytes, unsigned char *data)
 
   // Send 2 terminatings 0's
   sendzero();
-  sendzero();  
-}//end of send the data	
+  sendzero();
+}//end of send the data
 
 void MANCHESTERClass::sendzero(void)
 {
-  delayMicroseconds(lastSend + HALF_BIT_INTERVAL - micros());        
-  digitalWrite(TxPin, HIGH);   
+  delayMicroseconds(lastSend + HALF_BIT_INTERVAL - micros());
+  digitalWrite(TxPin, HIGH);
 
-  delayMicroseconds(HALF_BIT_INTERVAL);        
+  delayMicroseconds(HALF_BIT_INTERVAL);
   digitalWrite(TxPin, LOW);
  
   lastSend = micros();
@@ -107,10 +107,10 @@ void MANCHESTERClass::sendzero(void)
 
 void MANCHESTERClass::sendone(void)
 {
-  delayMicroseconds(lastSend + HALF_BIT_INTERVAL - micros());        
-  digitalWrite(TxPin, LOW);   
+  delayMicroseconds(lastSend + HALF_BIT_INTERVAL - micros());
+  digitalWrite(TxPin, LOW);
 
-  delayMicroseconds(HALF_BIT_INTERVAL);        
+  delayMicroseconds(HALF_BIT_INTERVAL);
   digitalWrite(TxPin, HIGH);
  
   lastSend = micros();
@@ -125,7 +125,7 @@ static uint8_t rx_sync_count = 0;
 static uint8_t rx_mode = RX_MODE_IDLE;
 
 static unsigned int rx_manBits = 0; //the received manchester 32 bits
-static unsigned char rx_numMB = 0;  //the number of received manchester bits
+static unsigned char rx_numMB = 0; //the number of received manchester bits
 static unsigned char rx_curByte = 0;
 
 static unsigned char rx_maxBytes = 2;
@@ -133,7 +133,7 @@ static unsigned char rx_default_data[2];
 static unsigned char* rx_data = rx_default_data;
 
 void MANRX_SetupReceive()
-{  
+{
   pinMode(RxPin, INPUT);
 /*
 This code gives a basic data rate as 1000 bits/s. In manchester encoding we send 1 0 for a data bit 0.
@@ -144,22 +144,40 @@ The actual data rate is then 500 bits/s.
 The timing of these bits are as follows.
 
 uS in a second / 1,000 bits/second
-     1,000,000 / 1,000 = 1,000uS/bit
+1,000,000 / 1,000 = 1,000uS/bit
 */
 #if defined( __AVR_ATtinyX5__ )
 /*
 Timer 1 is used with a ATtiny85. The base clock is 8MHz. We use a 1/128 clock divider
+(or 1/16 clock divider for 1 Mhz)
 which gives 16uS per count.
 
-  1 / (8,000,000 / 128) = 16uS/count
-  1,000 / 16 = 62.5 counts/bit
+1 / (8,000,000 / 128) = 16uS/count
+1,000 / 16 = 62.5 counts/bit
 
 At this rate we expect 62.5 counts/bit.
 
 http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
 */
-  TCCR1 = _BV(CTC1) | _BV(CS13); //counts every 16 usec with 8Mhz clock
-  OCR1C = 4; // Clear TCNT1 every 5 counts (0->4)
+  #if F_CPU == 1000000UL
+    TCCR1 = _BV(CTC1) | _BV(CS12) | _BV(CS10); // ckdiv 16 = counts every 16 usec with 8Mhz clock
+    OCR1C = 4; // Clear TCNT1 every 5 counts (0->4), causing interrupt at 12.5khz rate
+  #elif F_CPU == 8000000UL
+    TCCR1 = _BV(CTC1) | _BV(CS13); // ckdiv 128 = counts every 16 usec with 8Mhz clock
+    OCR1C = 4; // Clear TCNT1 every 5 counts (0->4), causing interrupt at 12.5khz rate
+  #elif F_CPU == 16000000UL
+    TCCR1 = _BV(CTC1) | _BV(CS13) | _BV(CS10); // ckdiv 256 = counts every 16 usec with 16Mhz clock
+    OCR1C = 4; // Clear TCNT1 every 5 counts (0->4), causing interrupt at 12.5khz rate
+  #elif F_CPU == 16500000UL
+    // Digispark and other V-USB-based attiny85 devices need 16.5mhz clock speed, so configure counter
+    // so overflow interrupt fires at same rate on these devices also
+    TCCR1 = _BV(CTC1) | _BV(CS12); // ckdiv 8 = counts every 2.0625 usec with 16.5Mhz clock
+    OCR1C = 164; // Clear TCNT1 every 165 counts (0->164)
+    // results in overflow at rate of 12.5khz, like other supported clock speeds
+  #else
+    #error "Manchester library only supports 1mhz, 8mhz, 16mhz, and 16.5mhz clock speeds on ATtiny85 chip"
+  #endif
+  
   OCR1A = 0; // Trigger interrupt when TCNT1 is reset to 0
   TIMSK |= _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
@@ -167,15 +185,29 @@ http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
 #elif defined( __AVR_ATtinyX4__ )
 /*
 Timer 1 is used with a ATtiny84. The base clock is 8MHz. We use a 1/64 clock divider
+(or 1/8 clock divider for 1 Mhz)
+There is no 1/128 or 1/16 prescaller so we have to use the faster one and count to 10 instead of 5
+
 which gives 8uS per count.
 
-  1 / (8,000,000 / 64) = 8uS/count
-  1,000 / 8 = 125 counts/bit
+1 / (8,000,000 / 64) = 8uS/count
+1,000 / 8 = 125 counts/bit
 
 At this rate we expect 125 counts/bit.
 */
-  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //counts every 8 usec with 8Mhz clock
-  OCR1A = 9; // interrupt every 10 counts (0->9)
+  #if F_CPU == 1000000UL
+	  TCCR1B = _BV(WGM12) | _BV(CS11); //ckdiv 8
+	  OCR1A = 9; // interrupt every 10 counts (0->9)
+  #elif F_CPU == 8000000UL
+	  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //ckdiv 64
+	  OCR1A = 9; // interrupt every 10 counts (0->9)
+  #elif F_CPU == 16000000UL
+	  TCCR1B = _BV(WGM12) | _BV(CS12; //ckdiv 256
+	  OCR1A = 4; // interrupt every 5 counts (0->5)
+  #else
+    #error "Manchester library only supports 1mhz, 8mhz, 16mhz on ATtiny84"
+  #endif
+  
   TIMSK1 |= _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
 
@@ -184,8 +216,8 @@ At this rate we expect 125 counts/bit.
 Timer 3 is used with a ATMega32U4. The base clock is 16MHz. We use a 1/256 clock divider
 which gives 16uS per count.
 
-  1 / (16,000,000 / 256) = 16uS/count
-  1,000 / 16 = 62.5 counts/bit
+1 / (16,000,000 / 256) = 16uS/count
+1,000us / 16uS = 62.5 counts/bit
 
 At this rate we expect 62.5 counts/bit.
 
@@ -194,23 +226,31 @@ http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
   TCCR3A = 0; // reset counter on match
   TCCR3B = _BV(WGM32) | _BV(CS32); //counts every 16 usec with 16 Mhz clock
   OCR3A = 4; // interrupt every 5 counts (0->4)
-  TIFR3 = _BV(OCF3A);   // clear interrupt flag
+  TIFR3 = _BV(OCF3A); // clear interrupt flag
   TIMSK3 = _BV(OCIE3A); // Turn on interrupt
   TCNT3 = 0; // Set counter to 0
 #else
 /*
 Timer 2 is used with a ATMega328. The base clock is 16MHz. We use a 1/256 clock divider
+(or 1/128 clock divider for 8 Mhz)
 which gives 16uS per count.
 
-  1 / (16,000,000 / 256) = 16uS/count
-  1,000 / 16 = 62.5 counts/bit
+1 / (16,000,000 / 256) = 16uS/count (for 16Mhz)
+1 / (8,000,000 / 128) = 16uS/count (for 8Mhz)
+1,000 / 16 = 62.5 counts/bit
 
 At this rate we expect 62.5 counts/bit.
 
 http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
 */
   TCCR2A = _BV(WGM21); // reset counter on match
-  TCCR2B = _BV(CS22) | _BV(CS21); //counts every 16 usec with 16 Mhz clock
+  #if F_CPU == 8000000UL
+	TCCR2B = _BV(CS22); //counts every 16 usec with 16 Mhz clock (1/128)
+  #elif F_CPU == 16000000UL
+	TCCR2B = _BV(CS22) | _BV(CS21); //counts every 16 usec with 16 Mhz clock (1/256)
+  #else
+    #error "Manchester library only supports 8mhz, 16mhz on ATMega328"
+  #endif
   OCR2A = 4; // interrupt every 5 counts (0->4)
   TIMSK2 = _BV(OCIE2A); // Turn on interrupt
   TCNT2 = 0; // Set counter to 0
@@ -228,7 +268,7 @@ void MANRX_BeginReceiveBytes(unsigned char maxBytes, unsigned char *data)
 {
   rx_maxBytes = maxBytes;
   rx_data = data;
-  rx_mode = RX_MODE_PRE;  
+  rx_mode = RX_MODE_PRE;
 }
 
 void MANRX_StopReceive(void)
@@ -256,10 +296,10 @@ void MANRX_SetRxPin(char pin)
 {
   RxPin = pin;
   pinMode(RxPin, INPUT);
-}//end of set transmit pin	
+}//end of set transmit pin
 
-void AddManBit(unsigned int *manBits, unsigned char *numMB, 
-               unsigned char *curByte, unsigned char *data, 
+void AddManBit(unsigned int *manBits, unsigned char *numMB,
+               unsigned char *curByte, unsigned char *data,
                unsigned char bit)
 {
   *manBits <<= 1;
@@ -277,7 +317,7 @@ void AddManBit(unsigned int *manBits, unsigned char *numMB,
       // We can decode each bit by looking at the bottom bit of each pair.
       newData <<= 1;
       newData |= (*manBits & 1); // store the one
-      *manBits = *manBits >> 2; //get next data bit    
+      *manBits = *manBits >> 2; //get next data bit
     }
     data[*curByte] = newData;
     (*curByte)++;
@@ -296,7 +336,7 @@ ISR(TIMER2_COMPA_vect)
 {
   if (rx_mode < 3)
   {
-    // Increment counter  
+    // Increment counter
     rx_count += 5;
     
     // Check for value change
@@ -318,7 +358,7 @@ ISR(TIMER2_COMPA_vect)
       // Initial sync block
       if (transition)
       {
-        if(((rx_sync_count < 20) || (rx_last_sample == 1)) && 
+        if(((rx_sync_count < 20) || (rx_last_sample == 1)) &&
            ((rx_count < MinCount) || (rx_count > MaxCount)))
         {
           // First 20 bits and all 1 bits are expected to be regular
@@ -336,8 +376,8 @@ ISR(TIMER2_COMPA_vect)
         {
           rx_sync_count++;
           
-          if((rx_last_sample == 0) && 
-             (rx_sync_count >= 20) && 
+          if((rx_last_sample == 0) &&
+             (rx_sync_count >= 20) &&
              (rx_count > MinLongCount))
           {
             // We have seen at least 10 regular transitions
@@ -370,7 +410,7 @@ ISR(TIMER2_COMPA_vect)
         }
         else
         {
-          if(rx_count > MinLongCount)  // was the previous bit a double bit?
+          if(rx_count > MinLongCount) // was the previous bit a double bit?
           {
             AddManBit(&rx_manBits, &rx_numMB, &rx_curByte, rx_data, rx_last_sample);
           }
@@ -382,9 +422,9 @@ ISR(TIMER2_COMPA_vect)
           else
           {
             // Add the current bit
-            AddManBit(&rx_manBits, &rx_numMB, &rx_curByte, rx_data, rx_sample);          
+            AddManBit(&rx_manBits, &rx_numMB, &rx_curByte, rx_data, rx_sample);
             rx_count = 0;
-          }        
+          }
         }
       }
     }
