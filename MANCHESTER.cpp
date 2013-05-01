@@ -202,7 +202,7 @@ At this rate we expect 125 counts/bit.
 	  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //ckdiv 64
 	  OCR1A = 9; // interrupt every 10 counts (0->9)
   #elif F_CPU == 16000000UL
-	  TCCR1B = _BV(WGM12) | _BV(CS12; //ckdiv 256
+	  TCCR1B = _BV(WGM12) | _BV(CS12); //ckdiv 256
 	  OCR1A = 4; // interrupt every 5 counts (0->5)
   #else
     #error "Manchester library only supports 1mhz, 8mhz, 16mhz on ATtiny84"
