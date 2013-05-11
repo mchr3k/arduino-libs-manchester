@@ -229,7 +229,23 @@ http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
   TIFR3 = _BV(OCF3A); // clear interrupt flag
   TIMSK3 = _BV(OCIE3A); // Turn on interrupt
   TCNT3 = 0; // Set counter to 0
+
+#elif defined(__AVR_ATmega8__)
+  TCCR1A = _BV(WGM12); 
+  #if F_CPU == 8000000UL
+	TCCR1B =  _BV(CS12); 
+  #elif F_CPU == 16000000UL
+	TCCR1B =  _BV(CS12) | _BV(CS11); 
+  #else
+	#error "Manchester library only supports 8mhz, 16mhz on ATMega8"
+  #endif
+  OCR1A = 4; 
+  TIFR = _BV(OCF1A); 
+  TIMSK = _BV(OCIE1A); 
+  TCNT1 = 0; 
+
 #else
+
 /*
 Timer 2 is used with a ATMega328. The base clock is 16MHz. We use a 1/256 clock divider
 (or 1/128 clock divider for 8 Mhz)
