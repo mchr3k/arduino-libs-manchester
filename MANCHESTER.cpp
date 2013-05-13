@@ -229,7 +229,27 @@ http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
   TIFR3 = _BV(OCF3A); // clear interrupt flag
   TIMSK3 = _BV(OCIE3A); // Turn on interrupt
   TCNT3 = 0; // Set counter to 0
+
+#elif defined(__AVR_ATmega8__)
+// Timer/counter 1 is used with ATmega8. The base clock is 16 MHz. We use a 1/256 clock divider (or 1/128 clock divider for 8 MHz). Which gives 16uS per count, just like ATmega328 (below). 
+
+  TCCR1A = _BV(WGM12); // reset counter on match
+  #if F_CPU == 8000000UL
+	TCCR1B =  _BV(CS12); // CS12 bit set is (as far as I understand) equivalent to setting bit CS22 on ATmega328. 
+  #elif F_CPU == 16000000UL
+	TCCR1B =  _BV(CS12) | _BV(CS11); // CS12 + CS11 set is, as far as I understand, equivalent to setting bit CS22 + CS21 on ATmega328.
+  #else
+	#error "Manchester library only supports 8mhz, 16mhz on ATMega8"
+  #endif
+  OCR1A = 4; // Interrupt every 5 counts (0->4)
+  TIFR = _BV(OCF1A);  // clear interrupt flag
+  TIMSK = _BV(OCIE1A); // Turn on interrupt
+  TCNT1 = 0; // Set counter to 0
+// I have tested this over a very short distance on 8 and 16MHz. It works for me. I`m not pretending that I understand everything I did here, so please fix it if I made any mistakes. - Bredo
+
+
 #else
+
 /*
 Timer 2 is used with a ATMega328. The base clock is 16MHz. We use a 1/256 clock divider
 (or 1/128 clock divider for 8 Mhz)
