@@ -146,79 +146,113 @@ The timing of these bits are as follows.
 uS in a second / 1,000 bits/second
 1,000,000 / 1,000 = 1,000uS/bit
 */
+
 #if defined( __AVR_ATtinyX5__ )
-/*
-Timer 1 is used with a ATtiny85. 
-http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
-*/
-#if F_CPU == 1000000UL
-  TCCR1 = _BV(CTC1) | _BV(CS13); // ckdiv 128 
-  OCR1C = 2; // interrupt every 3 counts (0->2)
-#elif F_CPU == 8000000UL
-  TCCR1 = _BV(CTC1) | _BV(CS13) | _BV(CS10); // ckdiv 256 
-  OCR1C = 11; // interrupt every 12 counts (0->11)
-#elif F_CPU == 16000000UL
-  TCCR1 = _BV(CTC1) | _BV(CS13) | _BV(CS10); // ckdiv 256 
-  OCR1C = 23; // interrupt every 24 counts (0->23)
-#else
-#error "Manchester library only supports 1mhz, 8mhz, 16mhz clock speeds on ATtiny85 chip"
-#endif
+
+  /*
+  Timer 1 is used with a ATtiny85. 
+  http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
+  */
+
+  #if F_CPU == 1000000UL
+    TCCR1 = _BV(CTC1) | _BV(CS13); // ckdiv 128 
+    OCR1C = 2; // interrupt every 3 counts (0->2)
+  #elif F_CPU == 8000000UL
+    TCCR1 = _BV(CTC1) | _BV(CS13) | _BV(CS10); // ckdiv 256 
+    OCR1C = 11; // interrupt every 12 counts (0->11)
+  #elif F_CPU == 16000000UL
+    TCCR1 = _BV(CTC1) | _BV(CS13) | _BV(CS10); // ckdiv 256 
+    OCR1C = 23; // interrupt every 24 counts (0->23)
+  #else
+  #error "Manchester library only supports 1mhz, 8mhz, 16mhz clock speeds on ATtiny85 chip"
+  #endif
   
   OCR1A = 0; // Trigger interrupt when TCNT1 is reset to 0
   TIMSK |= _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
 
 #elif defined( __AVR_ATtinyX4__ )
-/*
-Timer 1 is used with a ATtiny84. 
-http://www.atmel.com/Images/doc8006.pdf
-*/
-#if F_CPU == 1000000UL
-  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //ckdiv 64
-  OCR1A = 5; // interrupt every 6 counts (0->5)
-#elif F_CPU == 8000000UL
-  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //ckdiv 64
-  OCR1A = 47; // interrupt every 48 counts (0->47)
-#elif F_CPU == 16000000UL
-  TCCR1B = _BV(WGM12) | _BV(CS12); //ckdiv 256
-  OCR1A = 23; // interrupt every 24 counts (0->23)
-#else
-#error "Manchester library only supports 1mhz, 8mhz, 16mhz on ATtiny84"
-#endif
+
+  /*
+  Timer 1 is used with a ATtiny84. 
+  http://www.atmel.com/Images/doc8006.pdf
+  */
+
+  #if F_CPU == 1000000UL
+    TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //ckdiv 64
+    OCR1A = 5; // interrupt every 6 counts (0->5)
+  #elif F_CPU == 8000000UL
+    TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //ckdiv 64
+    OCR1A = 47; // interrupt every 48 counts (0->47)
+  #elif F_CPU == 16000000UL
+    TCCR1B = _BV(WGM12) | _BV(CS12); //ckdiv 256
+    OCR1A = 23; // interrupt every 24 counts (0->23)
+  #else
+  #error "Manchester library only supports 1mhz, 8mhz, 16mhz on ATtiny84"
+  #endif
   
   TIMSK1 |= _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
 
 #elif defined(__AVR_ATmega32U4__)
-/*
-Timer 3 is used with a ATMega32U4. 
-*/
+
+  /*
+  Timer 3 is used with a ATMega32U4. 
+  http://www.atmel.com/Images/7766S.pdf
+  */
+	//16Mhz clock
   TCCR3A = 0; // reset counter on match
   TCCR3B = _BV(WGM32) | _BV(CS32); //counts every 16 usec with 16 Mhz clock
   OCR3A = 23; // interrupt every 24 counts (0->23)
   TIFR3 = _BV(OCF3A); // clear interrupt flag
   TIMSK3 = _BV(OCIE3A); // Turn on interrupt
   TCNT3 = 0; // Set counter to 0
-#else
 
-/*
-Timer 2 is used with a ATMega328.
-http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
-*/
+#elif defined(__AVR_ATmega8__)
+
+  /* 
+  Timer/counter 1 is used with ATmega8. 
+  http://www.atmel.com/Images/Atmel-2486-8-bit-AVR-microcontroller-ATmega8_L_datasheet.pdf
+  */
+
+  TCCR1A = _BV(WGM12); // reset counter on match
+  #if F_CPU == 1000000UL
+    TCCR1B =  _BV(CS11) | _BV(CS10); // 1/64 prescaler
+    OCR1A = 5; // Interrupt every 6 counts (0->5)
+  #elif F_CPU == 8000000UL
+    TCCR1B =  _BV(CS12) | _BV(CS10); // 1/1024 prescaler
+    OCR1A = 2; // Interrupt every 3 counts (0->2)
+  #elif F_CPU == 16000000UL
+    TCCR1B =  _BV(CS12) | _BV(CS10); // 1/1024 prescaler
+    OCR1A = 5; // Interrupt every 6 counts (0->5)
+  #else
+	#error "Manchester library only supports 1Mhz, 8mhz, 16mhz on ATMega8"
+  #endif
+  TIFR = _BV(OCF1A);  // clear interrupt flag
+  TIMSK = _BV(OCIE1A); // Turn on interrupt
+  TCNT1 = 0; // Set counter to 0
+
+#else // ATmega328 is a default microcontroller
+
+
+  /*
+  Timer 2 is used with a ATMega328.
+  http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
+  */
 
   TCCR2A = _BV(WGM21); // reset counter on match
-#if F_CPU == 1000000UL
-  TCCR2B = _BV(CS22) | _BV(CS20); // 1/128 prescaler
-  OCR2A = 2; // interrupt every 3 counts (0->2)
-#elif F_CPU == 8000000UL
-  TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // 1/1024 prescaler
-  OCR2A = 2; // interrupt every 3 counts (0->2)
-#elif F_CPU == 16000000UL
-  TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // 1/1024 prescaler
-  OCR2A = 5; // interrupt every 6 counts (0->5)
-#else
-#error "Manchester library only supports 8mhz, 16mhz on ATMega328"
-#endif
+  #if F_CPU == 1000000UL
+    TCCR2B = _BV(CS22) | _BV(CS20); // 1/128 prescaler
+    OCR2A = 2; // interrupt every 3 counts (0->2)
+  #elif F_CPU == 8000000UL
+    TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // 1/1024 prescaler
+    OCR2A = 2; // interrupt every 3 counts (0->2)
+  #elif F_CPU == 16000000UL
+    TCCR2B = _BV(CS22) | _BV(CS21) | _BV(CS20); // 1/1024 prescaler
+    OCR2A = 5; // interrupt every 6 counts (0->5)
+  #else
+  #error "Manchester library only supports 8mhz, 16mhz on ATMega328"
+  #endif
   TIMSK2 = _BV(OCIE2A); // Turn on interrupt
   TCNT2 = 0; // Set counter to 0
 #endif
