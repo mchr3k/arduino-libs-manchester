@@ -22,7 +22,7 @@ We use Timing Based Manchester Decode.
 In this approach we will capture the time between each transition coming from the demodulation
 circuit."
 
-Timer 2 is used with a ATMega328. Timer 1 is used for a ATtiny85.
+Timer 2 is used with a ATMega328. Timer 1 is used for a ATtiny85 and ATtiny84
 
 This code gives a basic data rate as 1000 bits/s. In manchester encoding we send 1 0 for a data bit 0.
 We send 0 1 for a data bit 1. This ensures an average over time of a fixed DC level in the TX/RX.
@@ -34,7 +34,13 @@ The actual data rate is then 500 bits/s.
 #define MANCHESTER_h
 
 #define TxDefault 4 //the digital pin to use to transmit data
-#define pulse 1000 //the individual transmit pulse width in msec
+
+//timer scaling factors for different transmission speeds
+#define MAN_1200 0
+#define MAN_2400 1
+#define MAN_4800 2
+#define MAN_9600 3
+#define MAN_19200 4
 
 /*
 Timer 2 in the ATMega328 and Timer 1 in a ATtiny85 is used to find the time between
@@ -70,6 +76,7 @@ class MANCHESTERClass
   public:
     MANCHESTERClass(); //the constructor
     void SetTxPin(char pin); //set the arduino digital pin for transmit. default 4.
+    void begin(unsigned char SF = MAN_1200); //set up transmission
     void Transmit(unsigned int data); //transmit 16 bits of data
     void TransmitBytes(unsigned char numBytes, unsigned char *data); // transmit a byte array
     
@@ -77,6 +84,7 @@ class MANCHESTERClass
     void sendzero(void);
     void sendone(void);
     unsigned char TxPin;
+    unsigned char speedFactor;
     unsigned long lastSend;
 };//end of class MANCHESTER
 
@@ -88,7 +96,7 @@ extern "C"
     extern void MANRX_SetRxPin(char pin);
     
     //begin the timer used to receive data
-    extern void MANRX_SetupReceive();
+    extern void MANRX_SetupReceive(unsigned char speedFactor = MAN_1200);
     
     // begin receiving 16 bits
     extern void MANRX_BeginReceive(void);
