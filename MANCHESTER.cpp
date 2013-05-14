@@ -9,8 +9,8 @@ Quotes from the application note:
 "Manchester coding states that there will always be a transition of the message signal
 at the mid-point of the data bit frame.
 What occurs at the bit edges depends on the state of the previous bit frame and
-does not always produce a transition. A logical “1” is defined as a mid-point transition
-from low to high and a “0” is a mid-point transition from high to low.
+does not always produce a transition. A logical '1' is defined as a mid-point transition
+from low to high and a '0' is a mid-point transition from high to low.
 
 We use Timing Based Manchester Decode.
 In this approach we will capture the time between each transition coming from the demodulation
@@ -31,6 +31,8 @@ The actual data rate is then 500 bits/s.
 MANCHESTERClass::MANCHESTERClass() //constructor
 {
   TxPin = TxDefault;
+  speedFactor = MAN_1200;
+  //following needs to be moved to the begin method, if somebody is using default pin for something else you may short circuit something
   pinMode(TxPin, OUTPUT); // sets the digital pin 4 default as output
 }//end of constructor
 
@@ -39,6 +41,11 @@ void MANCHESTERClass::SetTxPin(char pin)
   TxPin = pin; // user sets the digital pin as output
   pinMode(TxPin, OUTPUT); // sets the digital pin 4 default as output
 }//end of set transmit pin
+
+void MANCHESTERClass::begin(unsigned char SF)
+{
+  speedFactor = SF;
+}
 
 void MANCHESTERClass::Transmit(unsigned int data)
 {
@@ -132,9 +139,10 @@ static unsigned char rx_maxBytes = 2;
 static unsigned char rx_default_data[2];
 static unsigned char* rx_data = rx_default_data;
 
-void MANRX_SetupReceive()
+void MANRX_SetupReceive(unsigned char speedFactor)
 {
   pinMode(RxPin, INPUT);
+
 /*
 This code gives a basic data rate as 1000 bits/s. In manchester encoding we send 1 0 for a data bit 0.
 We send 0 1 for a data bit 1. This ensures an average over time of a fixed DC level in the TX/RX.
@@ -146,36 +154,29 @@ The timing of these bits are as follows.
 uS in a second / 1,000 bits/second
 1,000,000 / 1,000 = 1,000uS/bit
 */
+
 #if defined( __AVR_ATtinyX5__ )
-/*
-Timer 1 is used with a ATtiny85. The base clock is 8MHz. We use a 1/128 clock divider
-(or 1/16 clock divider for 1 Mhz)
-which gives 16uS per count.
 
-1 / (8,000,000 / 128) = 16uS/count
-1,000 / 16 = 62.5 counts/bit
+  /*
+  Timer 1 is used with a ATtiny85. 
+  http://www.atmel.com/Images/Atmel-2586-AVR-8-bit-Microcontroller-ATtiny25-ATtiny45-ATtiny85_Datasheet.pdf page 88
+  How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 15625 / 4
+  */
 
-At this rate we expect 62.5 counts/bit.
-
-http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
-*/
   #if F_CPU == 1000000UL
-    TCCR1 = _BV(CTC1) | _BV(CS12) | _BV(CS10); // ckdiv 16 = counts every 16 usec with 8Mhz clock
-    OCR1C = 4; // Clear TCNT1 every 5 counts (0->4), causing interrupt at 12.5khz rate
+    TCCR1 = _BV(CTC1) | _BV(CS12); // 1/8 prescaler
+    OCR1C = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 8000000UL
-    TCCR1 = _BV(CTC1) | _BV(CS13); // ckdiv 128 = counts every 16 usec with 8Mhz clock
-    OCR1C = 4; // Clear TCNT1 every 5 counts (0->4), causing interrupt at 12.5khz rate
+    TCCR1 = _BV(CTC1) | _BV(CS12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
+    OCR1C = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 16000000UL
-    TCCR1 = _BV(CTC1) | _BV(CS13) | _BV(CS10); // ckdiv 256 = counts every 16 usec with 16Mhz clock
-    OCR1C = 4; // Clear TCNT1 every 5 counts (0->4), causing interrupt at 12.5khz rate
-  #elif F_CPU == 16500000UL
-    // Digispark and other V-USB-based attiny85 devices need 16.5mhz clock speed, so configure counter
-    // so overflow interrupt fires at same rate on these devices also
-    TCCR1 = _BV(CTC1) | _BV(CS12); // ckdiv 8 = counts every 2.0625 usec with 16.5Mhz clock
-    OCR1C = 164; // Clear TCNT1 every 165 counts (0->164)
-    // results in overflow at rate of 12.5khz, like other supported clock speeds
+    TCCR1 = _BV(CTC1) | _BV(CS13); // 1/128 prescaler
+    OCR1C = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+  #elif F_CPU == 16500000UL     
+    TCCR1 = _BV(CTC1) | _BV(CS12) | _BV(CS11); // 1/32 prescaler
+    OCR1C = (132 >> speedFactor) - 1; // interrupt every 132 counts for base speed
   #else
-    #error "Manchester library only supports 1mhz, 8mhz, 16mhz, and 16.5mhz clock speeds on ATtiny85 chip"
+  #error "Manchester library only supports 1mhz, 8mhz, 16mhz, 16.5Mhz clock speeds on ATtiny85 chip"
   #endif
   
   OCR1A = 0; // Trigger interrupt when TCNT1 is reset to 0
@@ -183,98 +184,106 @@ http://www.atmel.com/dyn/resources/prod_documents/doc2586.pdf
   TCNT1 = 0; // Set counter to 0
 
 #elif defined( __AVR_ATtinyX4__ )
-/*
-Timer 1 is used with a ATtiny84. The base clock is 8MHz. We use a 1/64 clock divider
-(or 1/8 clock divider for 1 Mhz)
-There is no 1/128 or 1/16 prescaller so we have to use the faster one and count to 10 instead of 5
 
-which gives 8uS per count.
+  /*
+  Timer 1 is used with a ATtiny84. 
+  http://www.atmel.com/Images/doc8006.pdf page 111
+  How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 15625 / 4
+  */
 
-1 / (8,000,000 / 64) = 8uS/count
-1,000 / 8 = 125 counts/bit
-
-At this rate we expect 125 counts/bit.
-*/
   #if F_CPU == 1000000UL
-	  TCCR1B = _BV(WGM12) | _BV(CS11); //ckdiv 8
-	  OCR1A = 9; // interrupt every 10 counts (0->9)
+    TCCR1B = _BV(WGM12) | _BV(CS11); // 1/8 prescaler
+    OCR1A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 8000000UL
-	  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11); //ckdiv 64
-	  OCR1A = 9; // interrupt every 10 counts (0->9)
+    TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
+    OCR1A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 16000000UL
-	  TCCR1B = _BV(WGM12) | _BV(CS12); //ckdiv 256
-	  OCR1A = 4; // interrupt every 5 counts (0->5)
+    TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
+    OCR1A = (64 >> speedFactor) - 1; // interrupt every 64 counts for base speed
   #else
-    #error "Manchester library only supports 1mhz, 8mhz, 16mhz on ATtiny84"
+  #error "Manchester library only supports 1mhz, 8mhz, 16mhz on ATtiny84"
   #endif
   
   TIMSK1 |= _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
 
 #elif defined(__AVR_ATmega32U4__)
-/*
-Timer 3 is used with a ATMega32U4. The base clock is 16MHz. We use a 1/256 clock divider
-which gives 16uS per count.
 
-1 / (16,000,000 / 256) = 16uS/count
-1,000us / 16uS = 62.5 counts/bit
-
-At this rate we expect 62.5 counts/bit.
-
-http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
-*/
+  /*
+  Timer 3 is used with a ATMega32U4. 
+  http://www.atmel.com/Images/doc7766.pdf page 133
+  How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 15625 / 4
+  */
+  
+  #if F_CPU == 1000000UL
+    TCCR3B = _BV(WGM32) | _BV(CS31); // 1/8 prescaler
+    OCR3A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+  #elif F_CPU == 8000000UL
+    TCCR3B = _BV(WGM32) | _BV(CS31) | _BV(CS30); // 1/64 prescaler
+    OCR3A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+  #elif F_CPU == 16000000UL
+    TCCR3B = _BV(WGM32) | _BV(CS31) | _BV(CS30); // 1/64 prescaler
+    OCR3A = (64 >> speedFactor) - 1; // interrupt every 64 counts for base speed
+  #else
+  #error "Manchester library only supports 1mhz, 8mhz, 16mhz on ATMega32U4"
+  #endif
+  
   TCCR3A = 0; // reset counter on match
-  TCCR3B = _BV(WGM32) | _BV(CS32); //counts every 16 usec with 16 Mhz clock
-  OCR3A = 4; // interrupt every 5 counts (0->4)
   TIFR3 = _BV(OCF3A); // clear interrupt flag
   TIMSK3 = _BV(OCIE3A); // Turn on interrupt
   TCNT3 = 0; // Set counter to 0
 
 #elif defined(__AVR_ATmega8__)
-// Timer/counter 1 is used with ATmega8. The base clock is 16 MHz. We use a 1/256 clock divider (or 1/128 clock divider for 8 MHz). Which gives 16uS per count, just like ATmega328 (below). 
+
+  /* 
+  Timer/counter 1 is used with ATmega8. 
+  http://www.atmel.com/Images/Atmel-2486-8-bit-AVR-microcontroller-ATmega8_L_datasheet.pdf page 99
+  How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 15625 / 4
+  */
 
   TCCR1A = _BV(WGM12); // reset counter on match
-  #if F_CPU == 8000000UL
-	TCCR1B =  _BV(CS12); // CS12 bit set is (as far as I understand) equivalent to setting bit CS22 on ATmega328. 
+  #if F_CPU == 1000000UL
+    TCCR1B =  _BV(CS11); // 1/8 prescaler
+    OCR1A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+  #elif F_CPU == 8000000UL
+    TCCR1B =  _BV(CS11) | _BV(CS10); // 1/64 prescaler
+    OCR1A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 16000000UL
-	TCCR1B =  _BV(CS12) | _BV(CS11); // CS12 + CS11 set is, as far as I understand, equivalent to setting bit CS22 + CS21 on ATmega328.
+    TCCR1B =  _BV(CS11) | _BV(CS10); // 1/64 prescaler
+    OCR1A = (64 >> speedFactor) - 1; // interrupt every 64 counts for base speed
   #else
-	#error "Manchester library only supports 8mhz, 16mhz on ATMega8"
+	#error "Manchester library only supports 1Mhz, 8mhz, 16mhz on ATMega8"
   #endif
-  OCR1A = 4; // Interrupt every 5 counts (0->4)
   TIFR = _BV(OCF1A);  // clear interrupt flag
   TIMSK = _BV(OCIE1A); // Turn on interrupt
   TCNT1 = 0; // Set counter to 0
-// I have tested this over a very short distance on 8 and 16MHz. It works for me. I`m not pretending that I understand everything I did here, so please fix it if I made any mistakes. - Bredo
+
+#else // ATmega328 is a default microcontroller
 
 
-#else
+  /*
+  Timer 2 is used with a ATMega328.
+  http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf page 162
+  How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 15625 / 4
+  */
 
-/*
-Timer 2 is used with a ATMega328. The base clock is 16MHz. We use a 1/256 clock divider
-(or 1/128 clock divider for 8 Mhz)
-which gives 16uS per count.
-
-1 / (16,000,000 / 256) = 16uS/count (for 16Mhz)
-1 / (8,000,000 / 128) = 16uS/count (for 8Mhz)
-1,000 / 16 = 62.5 counts/bit
-
-At this rate we expect 62.5 counts/bit.
-
-http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf
-*/
   TCCR2A = _BV(WGM21); // reset counter on match
-  #if F_CPU == 8000000UL
-	TCCR2B = _BV(CS22); //counts every 16 usec with 16 Mhz clock (1/128)
+  #if F_CPU == 1000000UL
+    TCCR2B = _BV(CS21); // 1/8 prescaler
+    OCR2A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+  #elif F_CPU == 8000000UL
+    TCCR2B = _BV(CS22); // 1/64 prescaler
+    OCR2A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 16000000UL
-	TCCR2B = _BV(CS22) | _BV(CS21); //counts every 16 usec with 16 Mhz clock (1/256)
+    TCCR2B = _BV(CS22) | _BV(CS20); // 1/128 prescaler
+    OCR2A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #else
-    #error "Manchester library only supports 8mhz, 16mhz on ATMega328"
+  #error "Manchester library only supports 8mhz, 16mhz on ATMega328"
   #endif
-  OCR2A = 4; // interrupt every 5 counts (0->4)
   TIMSK2 = _BV(OCIE2A); // Turn on interrupt
   TCNT2 = 0; // Set counter to 0
 #endif
+
 }
 
 void MANRX_BeginReceive(void)
@@ -357,7 +366,7 @@ ISR(TIMER2_COMPA_vect)
   if (rx_mode < 3)
   {
     // Increment counter
-    rx_count += 5;
+    rx_count += 16;
     
     // Check for value change
     rx_sample = digitalRead(RxPin);
