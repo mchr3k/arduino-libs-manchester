@@ -24,10 +24,10 @@ circuit."
 
 Timer 2 is used with a ATMega328. Timer 1 is used for a ATtiny85 and ATtiny84
 
-This code gives a basic data rate as 1000 bits/s. In manchester encoding we send 1 0 for a data bit 0.
+This code gives a basic data rate as 1200 bauds. In manchester encoding we send 1 0 for a data bit 0.
 We send 0 1 for a data bit 1. This ensures an average over time of a fixed DC level in the TX/RX.
 This is required by the ASK RF link system to ensure its correct operation.
-The actual data rate is then 500 bits/s.
+The data rate is then 600 bits/s.
 */
 
 #ifndef MANCHESTER_h
@@ -46,15 +46,33 @@ The actual data rate is then 500 bits/s.
 Timer 2 in the ATMega328 and Timer 1 in a ATtiny85 is used to find the time between
 each transition coming from the demodulation circuit.
 Their setup is for normal count. No connections. No interupts.
-At 16Mhz normal pulse takes 62.5 clock counts. For double pulse it's 125 counts
-At different speeds or on different chips, clock speed is adjusted to be compatible those values
-We set up intervals around this values to allow for errors due to clock speed variations
+For practical reasons we use power of 2 timer prescaller for sampling, 
+for best timing we use pulse lenght as integer multiple of sampling speed.
+We chose to sample every 16 ticks, and pulse lenght of 48 ticks 
+this gives us 16000000Hz/48/256 = 1302 pulses per second (so it's not really 1200) 
+At different transmission speeds or on different chip frequencies, clock prescaller is adjusted 
+to be compatible with those values. We allow about 50% clock speed difference both ways
+allowing us to transmit even with up to 100% in clock speed difference
 */
 
-#define MinCount 39 //pulse lower count limit on capture
-#define MaxCount 86 //pulse higher count limit on capture
-#define MinLongCount 99 //pulse lower count on double pulse
-#define MaxLongCount 151 //pulse higher count on double pulse
+// was:single 62.5 -> 52.08, double 125 -> 104.17, 20% margin: 62.5
+//single 48 = 1302bps
+/*
+	Signal timing, we take sample every 16 clock ticks
+	
+	ticks:   [0]----[16]----[32]----[48]----[64]----[80]----[96]---[112]---[128]---[144]---[160]--[176]
+	samples: |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
+	single:  |                [------|-------]
+	double:  |                                [--------------|---------------]
+	signal:  |_______________________                         _______________________
+	         |                       |_______________________|                       |_______
+
+*/
+
+#define MinCount 33 //pulse lower count limit on capture
+#define MaxCount 65 //pulse higher count limit on capture
+#define MinLongCount 66 //pulse lower count on double pulse
+#define MaxLongCount 129 //pulse higher count on double pulse
 
 #define RX_MODE_PRE 0
 #define RX_MODE_SYNC 1

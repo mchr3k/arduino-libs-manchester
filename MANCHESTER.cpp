@@ -26,7 +26,7 @@ The actual data rate is then 500 bits/s.
 
 #include "MANCHESTER.h"
 
-#define HALF_BIT_INTERVAL 1000 // microseconds
+#define HALF_BIT_INTERVAL 769 // microseconds
 
 MANCHESTERClass::MANCHESTERClass() //constructor
 {
@@ -73,7 +73,7 @@ The receiver is then operating correctly and we have locked onto the transmissio
 void MANCHESTERClass::TransmitBytes(unsigned char numBytes, unsigned char *data)
 {
   // Setup last send time so we start transmitting in 10us
-  lastSend = micros() - HALF_BIT_INTERVAL + 10;
+  lastSend = micros() - (HALF_BIT_INTERVAL >> speedFactor) + 10;
 
   // Send 14 0's
   for( int i = 0; i < 14; i++) //send capture pulses
@@ -103,10 +103,13 @@ void MANCHESTERClass::TransmitBytes(unsigned char numBytes, unsigned char *data)
 
 void MANCHESTERClass::sendzero(void)
 {
-  delayMicroseconds(lastSend + HALF_BIT_INTERVAL - micros());
+  long time = micros();
+  if (time < lastSend) lastSend = time; //in case we overflowed
+  long waitUntil = lastSend + (HALF_BIT_INTERVAL >> speedFactor);
+  if (waitUntil > time) delayMicroseconds(waitUntil - time);
   digitalWrite(TxPin, HIGH);
 
-  delayMicroseconds(HALF_BIT_INTERVAL);
+  delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
   digitalWrite(TxPin, LOW);
  
   lastSend = micros();
@@ -114,10 +117,13 @@ void MANCHESTERClass::sendzero(void)
 
 void MANCHESTERClass::sendone(void)
 {
-  delayMicroseconds(lastSend + HALF_BIT_INTERVAL - micros());
+  long time = micros();
+  if (time < lastSend) lastSend = time; //in case we overflowed
+  long waitUntil = lastSend + (HALF_BIT_INTERVAL >> speedFactor);
+  if (waitUntil > time) delayMicroseconds(waitUntil - time);
   digitalWrite(TxPin, LOW);
 
-  delayMicroseconds(HALF_BIT_INTERVAL);
+  delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
   digitalWrite(TxPin, HIGH);
  
   lastSend = micros();
@@ -144,15 +150,11 @@ void MANRX_SetupReceive(unsigned char speedFactor)
   pinMode(RxPin, INPUT);
 
 /*
-This code gives a basic data rate as 1000 bits/s. In manchester encoding we send 1 0 for a data bit 0.
+This code gives a basic data rate as 1200 bauds. In manchester encoding we send 1 0 for a data bit 0.
 We send 0 1 for a data bit 1. This ensures an average over time of a fixed DC level in the TX/RX.
 This is required by the ASK RF link system to ensure its correct operation.
-The actual data rate is then 500 bits/s.
+The data rate is then 600 bits/s.
 
-The timing of these bits are as follows.
-
-uS in a second / 1,000 bits/second
-1,000,000 / 1,000 = 1,000uS/bit
 */
 
 #if defined( __AVR_ATtinyX5__ )
