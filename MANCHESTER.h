@@ -34,6 +34,7 @@ The data rate is then 600 bits/s.
 #define MANCHESTER_h
 
 #define TxDefault 4 //the digital pin to use to transmit data
+#define RxDefault 5 //the digital pin to use to receive data
 
 //timer scaling factors for different transmission speeds
 #define MAN_1200 0
@@ -62,8 +63,8 @@ allowing us to transmit even with up to 100% in clock speed difference
 	
 	ticks:   [0]----[16]----[32]----[48]----[64]----[80]----[96]---[112]---[128]---[144]---[160]--[176]
 	samples: |-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|-------|
-	single:  |                [------|-------]
-	double:  |                                [--------------|---------------]
+	single:  |                [------|--------]
+	double:  |                                 [-------------|----------------]
 	signal:  |_______________________                         _______________________
 	         |                       |_______________________|                       |_______
 
@@ -89,21 +90,33 @@ allowing us to transmit even with up to 100% in clock speed difference
   #include <pins_arduino.h>
 #endif
 
-class MANCHESTERClass
+class Manchester
 {
   public:
-    MANCHESTERClass(); //the constructor
-    void SetTxPin(char pin); //set the arduino digital pin for transmit. default 4.
-    void begin(unsigned char SF = MAN_1200); //set up transmission
-    void Transmit(unsigned int data); //transmit 16 bits of data
-    void TransmitBytes(unsigned char numBytes, unsigned char *data); // transmit a byte array
+    Manchester(); //the constructor
+    void setTxPin(unsigned char pin); //set the arduino digital pin for transmit. default 4.
+    void setRxPin(unsigned char pin); //set the arduino digital pin for receive. default 5.
+    
+    void setupTransmit(unsigned char pin, unsigned char SF = MAN_1200); //set up transmission
+    void setupReceive(unsigned char pin, unsigned char SF = MAN_1200); //set up receiver
+    void setup(unsigned char Tpin, unsigned char Rpin, unsigned char SF = MAN_1200); //set up receiver
+    
+    void transmit(unsigned int data); //transmit 16 bits of data
+    void transmitBytes(unsigned char numBytes, unsigned char *data); // transmit a byte array
+    
+    //wrappers for global functions
+    void beginReceive(void);
+    unsigned char receiveComplete(void);
+    unsigned int getMessage(void);
+    void stopReceive(void);
     
   private:
-    void sendzero(void);
-    void sendone(void);
+    void sendZero(void);
+    void sendOne(void);
     unsigned char TxPin;
     unsigned char speedFactor;
     unsigned long lastSend;
+    
 };//end of class MANCHESTER
 
 // Cant really do this as a real C++ class, since we need to have
@@ -123,10 +136,10 @@ extern "C"
     extern void MANRX_BeginReceiveBytes(unsigned char maxBytes, unsigned char *data);
     
     // true if a complete message is ready
-    extern boolean MANRX_ReceiveComplete();
+    extern unsigned char MANRX_ReceiveComplete(void);
     
     // fetch the received message
-    extern unsigned int MANRX_GetMessage();
+    extern unsigned int MANRX_GetMessage(void);
     
     // fetch the received message
     extern void MANRX_GetMessageBytes(unsigned char *rcvdBytes, unsigned char **data);
@@ -135,6 +148,6 @@ extern "C"
     extern void MANRX_StopReceive(void);
 }
 
-extern MANCHESTERClass MANCHESTER;
+extern Manchester man;
 
 #endif

@@ -18,39 +18,79 @@ circuit."
 
 Timer 2 is used with a ATMega328. Timer 1 is used for a ATtiny85.
 
-This code gives a basic data rate as 1000 bits/s. In manchester encoding we send 1 0 for a data bit 0.
+This code gives a basic data rate as 1200 bauds. In manchester encoding we send 1 0 for a data bit 0.
 We send 0 1 for a data bit 1. This ensures an average over time of a fixed DC level in the TX/RX.
 This is required by the ASK RF link system to ensure its correct operation.
-The actual data rate is then 500 bits/s.
+The data rate is then 600 bits/s.
 */
 
 #include "MANCHESTER.h"
 
 #define HALF_BIT_INTERVAL 769 // microseconds
 
-MANCHESTERClass::MANCHESTERClass() //constructor
+static char RxPin = RxDefault;
+
+static int rx_sample = 0;
+static int rx_last_sample = 0;
+static uint8_t rx_count = 0;
+static uint8_t rx_sync_count = 0;
+static uint8_t rx_mode = RX_MODE_IDLE;
+
+static unsigned int rx_manBits = 0; //the received manchester 32 bits
+static unsigned char rx_numMB = 0; //the number of received manchester bits
+static unsigned char rx_curByte = 0;
+
+static unsigned char rx_maxBytes = 2;
+static unsigned char rx_default_data[2];
+static unsigned char* rx_data = rx_default_data;
+
+Manchester::Manchester() //constructor
 {
   TxPin = TxDefault;
+  ::RxPin = RxDefault;
   speedFactor = MAN_1200;
-  //following needs to be moved to the begin method, if somebody is using default pin for something else you may short circuit something
-  pinMode(TxPin, OUTPUT); // sets the digital pin 4 default as output
-}//end of constructor
+}
 
-void MANCHESTERClass::SetTxPin(char pin)
+
+void Manchester::setTxPin(unsigned char pin)
 {
   TxPin = pin; // user sets the digital pin as output
-  pinMode(TxPin, OUTPUT); // sets the digital pin 4 default as output
-}//end of set transmit pin
+  pinMode(TxPin, OUTPUT); 
+}
 
-void MANCHESTERClass::begin(unsigned char SF)
+
+void Manchester::setRxPin(unsigned char pin)
 {
+  ::RxPin = pin; // user sets the digital pin as output
+  pinMode(::RxPin, INPUT); 
+}
+
+
+void Manchester::setupTransmit(unsigned char pin, unsigned char SF)
+{
+  setTxPin(pin);
   speedFactor = SF;
 }
 
-void MANCHESTERClass::Transmit(unsigned int data)
+
+void Manchester::setupReceive(unsigned char pin, unsigned char SF)
+{
+  setRxPin(pin);
+  ::MANRX_SetupReceive(SF);
+}
+
+
+void Manchester::setup(unsigned char Tpin, unsigned char Rpin, unsigned char SF)
+{
+  setupTransmit(Tpin, SF);
+  setupReceive(Rpin, SF);
+}
+
+
+void Manchester::transmit(unsigned int data)
 {
   unsigned char byteData[2] = {data >> 8, data & 0xFF};
-  TransmitBytes(2, byteData);
+  transmitBytes(2, byteData);
 }
 
 /*
@@ -70,17 +110,17 @@ the transmit level.
 The receiver waits until we have at least 10 10's and then a start pulse 01.
 The receiver is then operating correctly and we have locked onto the transmission.
 */
-void MANCHESTERClass::TransmitBytes(unsigned char numBytes, unsigned char *data)
+void Manchester::transmitBytes(unsigned char numBytes, unsigned char *data)
 {
   // Setup last send time so we start transmitting in 10us
   lastSend = micros() - (HALF_BIT_INTERVAL >> speedFactor) + 10;
 
   // Send 14 0's
   for( int i = 0; i < 14; i++) //send capture pulses
-    sendzero(); //end of capture pulses
+    sendZero(); //end of capture pulses
  
   // Send a single 1
-  sendone(); //start data pulse
+  sendOne(); //start data pulse
  
   // Send the user data
   for (unsigned char i = 0; i < numBytes; i++)
@@ -89,19 +129,20 @@ void MANCHESTERClass::TransmitBytes(unsigned char numBytes, unsigned char *data)
     for (char j = 0; j < 8; j++)
     {
       if ((data[i] & mask) == 0)
-        sendzero();
+        sendZero();
       else
-        sendone();
+        sendOne();
       mask = mask << 1; //get next bit
     }//end of byte
   }//end of data
 
   // Send 2 terminatings 0's
-  sendzero();
-  sendzero();
+  sendZero();
+  sendZero();
 }//end of send the data
 
-void MANCHESTERClass::sendzero(void)
+
+void Manchester::sendZero(void)
 {
   long time = micros();
   if (time < lastSend) lastSend = time; //in case we overflowed
@@ -115,7 +156,8 @@ void MANCHESTERClass::sendzero(void)
   lastSend = micros();
 }//end of send a zero
 
-void MANCHESTERClass::sendone(void)
+
+void Manchester::sendOne(void)
 {
   long time = micros();
   if (time < lastSend) lastSend = time; //in case we overflowed
@@ -129,21 +171,31 @@ void MANCHESTERClass::sendone(void)
   lastSend = micros();
 }//end of send one
 
-static char RxPin = 4;
 
-static int rx_sample = 0;
-static int rx_last_sample = 0;
-static uint8_t rx_count = 0;
-static uint8_t rx_sync_count = 0;
-static uint8_t rx_mode = RX_MODE_IDLE;
+void Manchester::beginReceive(void)
+{
+  ::MANRX_BeginReceive();
+}
 
-static unsigned int rx_manBits = 0; //the received manchester 32 bits
-static unsigned char rx_numMB = 0; //the number of received manchester bits
-static unsigned char rx_curByte = 0;
 
-static unsigned char rx_maxBytes = 2;
-static unsigned char rx_default_data[2];
-static unsigned char* rx_data = rx_default_data;
+unsigned char Manchester::receiveComplete(void)
+{
+  ::MANRX_ReceiveComplete();
+}
+
+
+unsigned int Manchester::getMessage(void)
+{
+  ::MANRX_GetMessage();
+}
+
+
+void Manchester::stopReceive(void)
+{
+  ::MANRX_StopReceive();
+}
+
+//global functions
 
 void MANRX_SetupReceive(unsigned char speedFactor)
 {
@@ -307,7 +359,7 @@ void MANRX_StopReceive(void)
   rx_mode = RX_MODE_IDLE;
 }
 
-boolean MANRX_ReceiveComplete(void)
+unsigned char MANRX_ReceiveComplete(void)
 {
   return (rx_mode == RX_MODE_MSG);
 }
@@ -372,7 +424,7 @@ ISR(TIMER2_COMPA_vect)
     
     // Check for value change
     rx_sample = digitalRead(RxPin);
-    boolean transition = (rx_sample != rx_last_sample);
+    unsigned char transition = (rx_sample != rx_last_sample);
   
     if (rx_mode == RX_MODE_PRE)
     {
@@ -465,4 +517,4 @@ ISR(TIMER2_COMPA_vect)
   }
 }
 
-MANCHESTERClass MANCHESTER;
+Manchester man;
