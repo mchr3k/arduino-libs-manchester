@@ -24,25 +24,25 @@ This is required by the ASK RF link system to ensure its correct operation.
 The data rate is then 600 bits/s.
 */
 
-#include "MANCHESTER.h"
+#include "Manchester.h"
 
-#define HALF_BIT_INTERVAL 769 // microseconds
+#define HALF_BIT_INTERVAL 768 // microseconds (48 * 256 * 1000000 / 16000000Hz)
 
-static char RxPin = RxDefault;
+static int8_t RxPin = RxDefault;
 
-static int rx_sample = 0;
-static int rx_last_sample = 0;
+static int16_t rx_sample = 0;
+static int16_t rx_last_sample = 0;
 static uint8_t rx_count = 0;
 static uint8_t rx_sync_count = 0;
 static uint8_t rx_mode = RX_MODE_IDLE;
 
-static unsigned int rx_manBits = 0; //the received manchester 32 bits
-static unsigned char rx_numMB = 0; //the number of received manchester bits
-static unsigned char rx_curByte = 0;
+static uint16_t rx_manBits = 0; //the received manchester 32 bits
+static uint8_t rx_numMB = 0; //the number of received manchester bits
+static uint8_t rx_curByte = 0;
 
-static unsigned char rx_maxBytes = 2;
-static unsigned char rx_default_data[2];
-static unsigned char* rx_data = rx_default_data;
+static uint8_t rx_maxBytes = 2;
+static uint8_t rx_default_data[2];
+static uint8_t* rx_data = rx_default_data;
 
 Manchester::Manchester() //constructor
 {
@@ -52,44 +52,54 @@ Manchester::Manchester() //constructor
 }
 
 
-void Manchester::setTxPin(unsigned char pin)
+void Manchester::setTxPin(uint8_t pin)
 {
   TxPin = pin; // user sets the digital pin as output
   pinMode(TxPin, OUTPUT); 
 }
 
 
-void Manchester::setRxPin(unsigned char pin)
+void Manchester::setRxPin(uint8_t pin)
 {
   ::RxPin = pin; // user sets the digital pin as output
   pinMode(::RxPin, INPUT); 
 }
 
 
-void Manchester::setupTransmit(unsigned char pin, unsigned char SF)
+void Manchester::setupTransmit(uint8_t pin, uint8_t SF)
 {
   setTxPin(pin);
   speedFactor = SF;
+  //TODO find exact values for compensationFactor based on processor speed at higher TX speeds
+  #if F_CPU == 1000000UL
+    uint16_t compensationFactor = 50; //to compensate for time lost outside pulse transmission
+  #elif F_CPU == 8000000UL
+    uint16_t compensationFactor = 8; //to compensate for time lost outside pulse transmission
+  #else //16000000Mhz
+    uint16_t compensationFactor = 4; //to compensate for time lost outside pulse transmission
+  #endif  
+  delay1 = (HALF_BIT_INTERVAL >> speedFactor) - compensationFactor;
+  delay2 = (HALF_BIT_INTERVAL >> speedFactor);
 }
 
 
-void Manchester::setupReceive(unsigned char pin, unsigned char SF)
+void Manchester::setupReceive(uint8_t pin, uint8_t SF)
 {
   setRxPin(pin);
   ::MANRX_SetupReceive(SF);
 }
 
 
-void Manchester::setup(unsigned char Tpin, unsigned char Rpin, unsigned char SF)
+void Manchester::setup(uint8_t Tpin, uint8_t Rpin, uint8_t SF)
 {
   setupTransmit(Tpin, SF);
   setupReceive(Rpin, SF);
 }
 
 
-void Manchester::transmit(unsigned int data)
+void Manchester::transmit(uint16_t data)
 {
-  unsigned char byteData[2] = {data >> 8, data & 0xFF};
+  uint8_t byteData[2] = {data >> 8, data & 0xFF};
   transmitBytes(2, byteData);
 }
 
@@ -110,20 +120,20 @@ the transmit level.
 The receiver waits until we have at least 10 10's and then a start pulse 01.
 The receiver is then operating correctly and we have locked onto the transmission.
 */
-void Manchester::transmitBytes(unsigned char numBytes, unsigned char *data)
+void Manchester::transmitBytes(uint8_t numBytes, uint8_t *data)
 {
   // Send 14 0's
-  for( int i = 0; i < 14; i++) //send capture pulses
+  for( int16_t i = 0; i < 14; i++) //send capture pulses
     sendZero(); //end of capture pulses
  
   // Send a single 1
   sendOne(); //start data pulse
  
   // Send the user data
-  for (unsigned char i = 0; i < numBytes; i++)
+  for (uint8_t i = 0; i < numBytes; i++)
   {
-    unsigned int mask = 0x01; //mask to send bits
-    for (char j = 0; j < 8; j++)
+    uint16_t mask = 0x01; //mask to send bits
+    for (int8_t j = 0; j < 8; j++)
     {
       if ((data[i] & mask) == 0)
         sendZero();
@@ -141,22 +151,59 @@ void Manchester::transmitBytes(unsigned char numBytes, unsigned char *data)
 
 void Manchester::sendZero(void)
 {
-  delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
+  delayMicroseconds(delay1);
   digitalWrite(TxPin, HIGH);
 
-  delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
+  delayMicroseconds(delay2);
   digitalWrite(TxPin, LOW);
 }//end of send a zero
 
 
 void Manchester::sendOne(void)
 {
-  delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
+  delayMicroseconds(delay1);
   digitalWrite(TxPin, LOW);
 
-  delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
+  delayMicroseconds(delay2);
   digitalWrite(TxPin, HIGH);
 }//end of send one
+
+
+/*
+    format of the message including checksum and ID
+    
+    [0][1][2][3][4][5][6][7][8][9][a][b][c][d][e][f]
+    [   xID    ][ checksum ][        xdata         ]      
+    
+        xID = ID xor 0b0011
+        checksum = ID xor data[7:4] xor data[3:0]
+        xdata = data xor 0b11001010
+        
+        we xor the payload with random looking sequence
+        so the message doesn't look like syncing sequence
+        in case somebody sends just all zeroes or similiar
+                  
+*/
+
+//decode 8 bit payload and 4 bit ID from the message, return true if checksum is correct, otherwise false
+uint8_t Manchester::decodeMessage(uint16_t m, uint8_t &id, uint8_t &data)
+{
+  //extract components
+  data = (m & 0xFF) ^ 0b11001010;
+  id = (m >> 12) ^ 0b0011;
+  uint8_t ch = (m >> 8) & 0b1111; //checksum received
+  //calculate checksum
+  uint8_t ech = (id ^ data ^ (data >> 4)) & 0b1111; //checksum expected
+  return ch == ech;
+}
+
+//encode 8 bit payload, 4 bit ID and 4 bit checksum into 16 bit
+uint16_t Manchester::encodeMessage(uint8_t id, uint8_t data)
+{
+  uint8_t chsum = (id ^ data ^ (data >> 4)) & 0b1111;
+  uint16_t m = ((id ^ 0b0011) << 12) | (chsum << 8) | (data ^ 0b11001010);
+  return m;
+}
 
 
 void Manchester::beginReceive(void)
@@ -165,13 +212,13 @@ void Manchester::beginReceive(void)
 }
 
 
-unsigned char Manchester::receiveComplete(void)
+uint8_t Manchester::receiveComplete(void)
 {
   return ::MANRX_ReceiveComplete();
 }
 
 
-unsigned int Manchester::getMessage(void)
+uint16_t Manchester::getMessage(void)
 {
   return ::MANRX_GetMessage();
 }
@@ -184,7 +231,7 @@ void Manchester::stopReceive(void)
 
 //global functions
 
-void MANRX_SetupReceive(unsigned char speedFactor)
+void MANRX_SetupReceive(uint8_t speedFactor)
 {
   pinMode(RxPin, INPUT);
 
@@ -230,6 +277,7 @@ The data rate is then 600 bits/s.
   Timer 1 is used with a ATtiny84. 
   http://www.atmel.com/Images/doc8006.pdf page 111
   How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 15625 / 4
+  OCR1A can store only 8 bits
   */
 
   #if F_CPU == 1000000UL
@@ -260,11 +308,11 @@ The data rate is then 600 bits/s.
     TCCR3B = _BV(WGM32) | _BV(CS31); // 1/8 prescaler
     OCR3A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 8000000UL
-    TCCR3B = _BV(WGM32) | _BV(CS31) | _BV(CS30); // 1/64 prescaler
-    OCR3A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+    TCCR3B = _BV(WGM32) | _BV(CS31); // 1/8 prescaler
+    OCR3A = (256 >> speedFactor) - 1; // interrupt every 256 counts for base speed
   #elif F_CPU == 16000000UL
-    TCCR3B = _BV(WGM32) | _BV(CS31) | _BV(CS30); // 1/64 prescaler
-    OCR3A = (64 >> speedFactor) - 1; // interrupt every 64 counts for base speed
+    TCCR3B = _BV(WGM32) | _BV(CS31); // 1/8 prescaler
+    OCR3A = (512 >> speedFactor) - 1; // interrupt every 512 counts for base speed
   #else
   #error "Manchester library only supports 1mhz, 8mhz, 16mhz on ATMega32U4"
   #endif
@@ -280,6 +328,7 @@ The data rate is then 600 bits/s.
   Timer/counter 1 is used with ATmega8. 
   http://www.atmel.com/Images/Atmel-2486-8-bit-AVR-microcontroller-ATmega8_L_datasheet.pdf page 99
   How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 15625 / 4
+  OCR1A can store 16 bits
   */
 
   TCCR1A = _BV(WGM12); // reset counter on match
@@ -287,11 +336,11 @@ The data rate is then 600 bits/s.
     TCCR1B =  _BV(CS11); // 1/8 prescaler
     OCR1A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 8000000UL
-    TCCR1B =  _BV(CS11) | _BV(CS10); // 1/64 prescaler
-    OCR1A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+    TCCR1B =  _BV(CS11); // 1/8 prescaler
+    OCR1A = (256 >> speedFactor) - 1; // interrupt every 256 counts for base speed
   #elif F_CPU == 16000000UL
-    TCCR1B =  _BV(CS11) | _BV(CS10); // 1/64 prescaler
-    OCR1A = (64 >> speedFactor) - 1; // interrupt every 64 counts for base speed
+    TCCR1B =  _BV(CS11); // 1/8 prescaler
+    OCR1A = (512 >> speedFactor) - 1; // interrupt every 512 counts for base speed
   #else
 	#error "Manchester library only supports 1Mhz, 8mhz, 16mhz on ATMega8"
   #endif
@@ -306,6 +355,7 @@ The data rate is then 600 bits/s.
   Timer 2 is used with a ATMega328.
   http://www.atmel.com/dyn/resources/prod_documents/doc8161.pdf page 162
   How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 15625 / 4
+  OCR2A can store 16 bits
   */
 
   TCCR2A = _BV(WGM21); // reset counter on match
@@ -313,11 +363,11 @@ The data rate is then 600 bits/s.
     TCCR2B = _BV(CS21); // 1/8 prescaler
     OCR2A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
   #elif F_CPU == 8000000UL
-    TCCR2B = _BV(CS22); // 1/64 prescaler
-    OCR2A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+    TCCR2B = _BV(CS21); // 1/8 prescaler
+    OCR2A = (256 >> speedFactor) - 1; // interrupt every 256 counts for base speed
   #elif F_CPU == 16000000UL
-    TCCR2B = _BV(CS22) | _BV(CS20); // 1/128 prescaler
-    OCR2A = (32 >> speedFactor) - 1; // interrupt every 32 counts for base speed
+    TCCR2B = _BV(CS21); // 1/8 prescaler
+    OCR2A = (512 >> speedFactor) - 1; // interrupt every 512 counts for base speed
   #else
   #error "Manchester library only supports 8mhz, 16mhz on ATMega328"
   #endif
@@ -334,7 +384,7 @@ void MANRX_BeginReceive(void)
   rx_mode = RX_MODE_PRE;
 }
 
-void MANRX_BeginReceiveBytes(unsigned char maxBytes, unsigned char *data)
+void MANRX_BeginReceiveBytes(uint8_t maxBytes, uint8_t *data)
 {
   rx_maxBytes = maxBytes;
   rx_data = data;
@@ -346,40 +396,40 @@ void MANRX_StopReceive(void)
   rx_mode = RX_MODE_IDLE;
 }
 
-unsigned char MANRX_ReceiveComplete(void)
+uint8_t MANRX_ReceiveComplete(void)
 {
   return (rx_mode == RX_MODE_MSG);
 }
 
-unsigned int MANRX_GetMessage(void)
+uint16_t MANRX_GetMessage(void)
 {
-  return (((int)rx_data[0]) << 8) | (int)rx_data[1];
+  return (((int16_t)rx_data[0]) << 8) | (int16_t)rx_data[1];
 }
 
-void MANRX_GetMessageBytes(unsigned char *rcvdBytes, unsigned char **data)
+void MANRX_GetMessageBytes(uint8_t *rcvdBytes, uint8_t **data)
 {
   *rcvdBytes = rx_curByte;
   *data = rx_data;
 }
 
-void MANRX_SetRxPin(char pin)
+void MANRX_SetRxPin(uint8_t pin)
 {
   RxPin = pin;
   pinMode(RxPin, INPUT);
 }//end of set transmit pin
 
-void AddManBit(unsigned int *manBits, unsigned char *numMB,
-               unsigned char *curByte, unsigned char *data,
-               unsigned char bit)
+void AddManBit(uint16_t *manBits, uint8_t *numMB,
+               uint8_t *curByte, uint8_t *data,
+               uint8_t bit)
 {
   *manBits <<= 1;
   *manBits |= bit;
   (*numMB)++;
   if (*numMB == 16)
   {
-    unsigned char newData = 0;
+    uint8_t newData = 0;
 
-    for (char i = 0; i < 8; i++)
+    for (int8_t i = 0; i < 8; i++)
     {
       // ManBits holds 16 bits of manchester data
       // 1 = LO,HI
@@ -411,7 +461,7 @@ ISR(TIMER2_COMPA_vect)
     
     // Check for value change
     rx_sample = digitalRead(RxPin);
-    unsigned char transition = (rx_sample != rx_last_sample);
+    uint8_t transition = (rx_sample != rx_last_sample);
   
     if (rx_mode == RX_MODE_PRE)
     {
@@ -448,7 +498,7 @@ ISR(TIMER2_COMPA_vect)
           
           if((rx_last_sample == 0) &&
              (rx_sync_count >= 20) &&
-             (rx_count > MinLongCount))
+             (rx_count >= MinLongCount))
           {
             // We have seen at least 10 regular transitions
             // Lock sequence ends with unencoded bits 01
@@ -475,12 +525,12 @@ ISR(TIMER2_COMPA_vect)
         if((rx_count < MinCount) ||
            (rx_count > MaxLongCount))
         {
-          // Interference - give up
+          // wrong signal lenght, discard the message
           rx_mode = RX_MODE_PRE;
         }
         else
         {
-          if(rx_count > MinLongCount) // was the previous bit a double bit?
+          if(rx_count >= MinLongCount) // was the previous bit a double bit?
           {
             AddManBit(&rx_manBits, &rx_numMB, &rx_curByte, rx_data, rx_last_sample);
           }

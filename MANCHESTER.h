@@ -95,53 +95,58 @@ class Manchester
 {
   public:
     Manchester(); //the constructor
-    void setTxPin(unsigned char pin); //set the arduino digital pin for transmit. default 4.
-    void setRxPin(unsigned char pin); //set the arduino digital pin for receive. default 5.
+    void setTxPin(uint8_t pin); //set the arduino digital pin for transmit. default 4.
+    void setRxPin(uint8_t pin); //set the arduino digital pin for receive. default 5.
     
-    void setupTransmit(unsigned char pin, unsigned char SF = MAN_1200); //set up transmission
-    void setupReceive(unsigned char pin, unsigned char SF = MAN_1200); //set up receiver
-    void setup(unsigned char Tpin, unsigned char Rpin, unsigned char SF = MAN_1200); //set up receiver
+    void setupTransmit(uint8_t pin, uint8_t SF = MAN_1200); //set up transmission
+    void setupReceive(uint8_t pin, uint8_t SF = MAN_1200); //set up receiver
+    void setup(uint8_t Tpin, uint8_t Rpin, uint8_t SF = MAN_1200); //set up receiver
     
-    void transmit(unsigned int data); //transmit 16 bits of data
-    void transmitBytes(unsigned char numBytes, unsigned char *data); // transmit a byte array
+    void transmit(uint16_t data); //transmit 16 bits of data
+    void transmitBytes(uint8_t numBytes, uint8_t *data); // transmit a byte array
+    
+    uint8_t decodeMessage(uint16_t m, uint8_t &id, uint8_t &data); //decode 8 bit payload and 4 bit ID from the message, return 1 of checksum is correct, otherwise 0
+    uint16_t encodeMessage(uint8_t id, uint8_t data); //encode 8 bit payload, 4 bit ID and 4 bit checksum into 16 bit
     
     //wrappers for global functions
     void beginReceive(void);
-    unsigned char receiveComplete(void);
-    unsigned int getMessage(void);
+    uint8_t receiveComplete(void);
+    uint16_t getMessage(void);
     void stopReceive(void);
     
   private:
     void sendZero(void);
     void sendOne(void);
-    unsigned char TxPin;
-    unsigned char speedFactor;
-};//end of class MANCHESTER
+    uint8_t TxPin;
+    uint8_t speedFactor;
+    uint16_t delay1;
+    uint16_t delay2;
+};//end of class Manchester
 
 // Cant really do this as a real C++ class, since we need to have
 // an ISR
 extern "C"
 {
     //set the arduino digital pin for receive. default 4.
-    extern void MANRX_SetRxPin(char pin);
+    extern void MANRX_SetRxPin(uint8_t pin);
     
     //begin the timer used to receive data
-    extern void MANRX_SetupReceive(unsigned char speedFactor = MAN_1200);
+    extern void MANRX_SetupReceive(uint8_t speedFactor = MAN_1200);
     
     // begin receiving 16 bits
     extern void MANRX_BeginReceive(void);
     
     // begin receiving a byte array
-    extern void MANRX_BeginReceiveBytes(unsigned char maxBytes, unsigned char *data);
+    extern void MANRX_BeginReceiveBytes(uint8_t maxBytes, uint8_t *data);
     
     // true if a complete message is ready
-    extern unsigned char MANRX_ReceiveComplete(void);
+    extern uint8_t MANRX_ReceiveComplete(void);
     
     // fetch the received message
-    extern unsigned int MANRX_GetMessage(void);
+    extern uint16_t MANRX_GetMessage(void);
     
     // fetch the received message
-    extern void MANRX_GetMessageBytes(unsigned char *rcvdBytes, unsigned char **data);
+    extern void MANRX_GetMessageBytes(uint8_t *rcvdBytes, uint8_t **data);
     
     // stop receiving data
     extern void MANRX_StopReceive(void);
