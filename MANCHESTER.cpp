@@ -112,9 +112,6 @@ The receiver is then operating correctly and we have locked onto the transmissio
 */
 void Manchester::transmitBytes(unsigned char numBytes, unsigned char *data)
 {
-  // Setup last send time so we start transmitting in 10us
-  lastSend = micros() - (HALF_BIT_INTERVAL >> speedFactor) + 10;
-
   // Send 14 0's
   for( int i = 0; i < 14; i++) //send capture pulses
     sendZero(); //end of capture pulses
@@ -144,31 +141,21 @@ void Manchester::transmitBytes(unsigned char numBytes, unsigned char *data)
 
 void Manchester::sendZero(void)
 {
-  long time = micros();
-  if (time < lastSend) lastSend = time; //in case we overflowed
-  long waitUntil = lastSend + (HALF_BIT_INTERVAL >> speedFactor);
-  if (waitUntil > time) delayMicroseconds(waitUntil - time);
+  delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
   digitalWrite(TxPin, HIGH);
 
   delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
   digitalWrite(TxPin, LOW);
- 
-  lastSend = micros();
 }//end of send a zero
 
 
 void Manchester::sendOne(void)
 {
-  long time = micros();
-  if (time < lastSend) lastSend = time; //in case we overflowed
-  long waitUntil = lastSend + (HALF_BIT_INTERVAL >> speedFactor);
-  if (waitUntil > time) delayMicroseconds(waitUntil - time);
+  delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
   digitalWrite(TxPin, LOW);
 
   delayMicroseconds((HALF_BIT_INTERVAL >> speedFactor));
   digitalWrite(TxPin, HIGH);
- 
-  lastSend = micros();
 }//end of send one
 
 
@@ -180,13 +167,13 @@ void Manchester::beginReceive(void)
 
 unsigned char Manchester::receiveComplete(void)
 {
-  ::MANRX_ReceiveComplete();
+  return ::MANRX_ReceiveComplete();
 }
 
 
 unsigned int Manchester::getMessage(void)
 {
-  ::MANRX_GetMessage();
+  return ::MANRX_GetMessage();
 }
 
 

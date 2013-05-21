@@ -42,6 +42,9 @@ The data rate is then 600 bits/s.
 #define MAN_4800 2
 #define MAN_9600 3
 #define MAN_19200 4
+#define MAN_38400 5
+#define MAN_76800 6
+#define MAN_153600 7
 
 /*
 Timer 2 in the ATMega328 and Timer 1 in a ATtiny85 is used to find the time between
@@ -51,13 +54,11 @@ For practical reasons we use power of 2 timer prescaller for sampling,
 for best timing we use pulse lenght as integer multiple of sampling speed.
 We chose to sample every 16 ticks, and pulse lenght of 48 ticks 
 this gives us 16000000Hz/48/256 = 1302 pulses per second (so it's not really 1200) 
-At different transmission speeds or on different chip frequencies, clock prescaller is adjusted 
+At different transmission speeds or on different microcontroller frequencies, clock prescaller is adjusted 
 to be compatible with those values. We allow about 50% clock speed difference both ways
 allowing us to transmit even with up to 100% in clock speed difference
 */
 
-// was:single 62.5 -> 52.08, double 125 -> 104.17, 20% margin: 62.5
-//single 48 = 1302bps
 /*
 	Signal timing, we take sample every 16 clock ticks
 	
@@ -115,8 +116,6 @@ class Manchester
     void sendOne(void);
     unsigned char TxPin;
     unsigned char speedFactor;
-    unsigned long lastSend;
-    
 };//end of class MANCHESTER
 
 // Cant really do this as a real C++ class, since we need to have
