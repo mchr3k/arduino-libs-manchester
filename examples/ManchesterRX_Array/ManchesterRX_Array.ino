@@ -5,7 +5,7 @@
 
   Manchester Receiver example
   
-  In this example receiver will receive one 16 bit number per transmittion
+  In this example receiver will receive array of 10 bytes per transmittion
 
   try different speeds using this constants, your maximum possible speed will 
   depend on various factors like transmitter type, distance, microcontroller speed, ...
@@ -25,21 +25,23 @@
 #define LED_PIN 13
 
 uint8_t moo = 1;
+#define BUFFER_SIZE 10
+uint8_t buffer[BUFFER_SIZE];
 
 void setup() {
   pinMode(LED_PIN, OUTPUT);  
   digitalWrite(LED_PIN, moo);
   man.setupReceive(RX_PIN, MAN_1200);
-  man.beginReceive();
+  man.beginReceiveArray(BUFFER_SIZE, buffer);
 }
 
 void loop() {
   if (man.receiveComplete()) {
-    uint16_t m = man.getMessage();
-    man.beginReceive(); //start listening for next message right after you retrieve the message
+    uint8_t receivedSize = 0;
+    //do something with the data in 'buffer' here before you start receiving to the same buffer again
+    //...
+    man.beginReceiveArray(BUFFER_SIZE, buffer);
     moo = ++moo % 2;
     digitalWrite(LED_PIN, moo);
   }
 }
-
-

@@ -1,7 +1,5 @@
 This is a [Manchester encoding](http://en.wikipedia.org/wiki/Manchester_code) RF library which works on Arduino and ATTiny.
 
-Note: I am currently using this library with IDE 1.0.
-
 Library supports:
 
 various microcontrollers 
@@ -18,6 +16,7 @@ various microcontroller's speed both RX and TX
 * 16.5Mhz ATtiny85
 
 various transmission speeds
+* 300baud
 * 600baud
 * 1200baud
 * 2400baud
@@ -25,9 +24,11 @@ various transmission speeds
 * 9600baud
 * 19200baud
 
-You can sucessfully transmit between various microcontrollers runnning at various speeds with internal (inaccurate) clock.
-Your maximum transmission speed will depend on many factors, transmitter, antenna, distance, enviroment noise, 
-microcontroller type and speed
+With this library you can sucessfully transmit data between various microcontrollers 
+runnning at various speeds even if their clock speed varies up to 100%. 
+Works great with innacurate internal oscilator.
+Your maximum transmission speed will depend on many factors like transmitter type, 
+antenna, distance, enviroment noise, microcontroller type and speed
 
 Getting started on Arduino
 ------

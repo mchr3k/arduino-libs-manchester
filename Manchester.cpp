@@ -114,7 +114,7 @@ void Manchester::setup(uint8_t Tpin, uint8_t Rpin, uint8_t SF)
 void Manchester::transmit(uint16_t data)
 {
   uint8_t byteData[2] = {data >> 8, data & 0xFF};
-  transmitBytes(2, byteData);
+  transmitArray(2, byteData);
 }
 
 /*
@@ -134,7 +134,7 @@ the transmit level.
 The receiver waits until we have at least 10 10's and then a start pulse 01.
 The receiver is then operating correctly and we have locked onto the transmission.
 */
-void Manchester::transmitBytes(uint8_t numBytes, uint8_t *data)
+void Manchester::transmitArray(uint8_t numBytes, uint8_t *data)
 {
   // Send 14 0's
   for( int16_t i = 0; i < 14; i++) //send capture pulses
@@ -215,7 +215,7 @@ uint16_t Manchester::encodeMessage(uint8_t id, uint8_t data)
   return m;
 }
 
-void Manchester::beginReceiveBytes(uint8_t maxBytes, uint8_t *data)
+void Manchester::beginReceiveArray(uint8_t maxBytes, uint8_t *data)
 {
   ::MANRX_BeginReceiveBytes(maxBytes, data);
 }
@@ -411,11 +411,6 @@ uint16_t MANRX_GetMessage(void)
   return (((int16_t)rx_data[0]) << 8) | (int16_t)rx_data[1];
 }
 
-void MANRX_GetMessageBytes(uint8_t *rcvdBytes, uint8_t **data)
-{
-  *rcvdBytes = rx_curByte;
-  *data = rx_data;
-}
 
 void MANRX_SetRxPin(uint8_t pin)
 {

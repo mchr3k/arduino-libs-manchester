@@ -9,15 +9,15 @@
   try different speeds using this constants, your maximum possible speed will 
   depend on various factors like transmitter type, distance, microcontroller speed, ...
 
-    MAN_1200 0
-    MAN_2400 1
-    MAN_4800 2
-    MAN_9600 3
-    MAN_19200 4
-    MAN_38400 5
-    MAN_76800 6
-    MAN_153600 7
-    MAN_307200 8
+  MAN_300 0
+  MAN_600 1
+  MAN_1200 2
+  MAN_2400 3
+  MAN_4800 4
+  MAN_9600 5
+  MAN_19200 6
+  MAN_38400 7
+
 
 */
 

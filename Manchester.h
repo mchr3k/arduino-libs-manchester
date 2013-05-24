@@ -63,7 +63,7 @@ allowing us to transmit even with up to 100% in clock speed difference
 /*
 	Signal timing, we take sample every 8 clock ticks
 	
-	ticks:   [0]--[8]-[16]-[24]-[32]-[40]-[48]-[56]-[64]-[72]-[80]-[88]-[96][104][112][120][128][136]
+	ticks:   [0]-[8]--[16]-[24]-[32]-[40]-[48]-[56]-[64]-[72]-[80]-[88]-[96][104][112][120][128][136]
 	samples: |----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
 	single:  |                    [--------|----------]
 	double:  |                                         [-----------------|--------------------]
@@ -114,14 +114,14 @@ class Manchester
     void setup(uint8_t Tpin, uint8_t Rpin, uint8_t SF = MAN_1200); //set up receiver
     
     void transmit(uint16_t data); //transmit 16 bits of data
-    void transmitBytes(uint8_t numBytes, uint8_t *data); // transmit a byte array
+    void transmitArray(uint8_t numBytes, uint8_t *data); // transmit array of bytes
     
     uint8_t decodeMessage(uint16_t m, uint8_t &id, uint8_t &data); //decode 8 bit payload and 4 bit ID from the message, return 1 of checksum is correct, otherwise 0
     uint16_t encodeMessage(uint8_t id, uint8_t data); //encode 8 bit payload, 4 bit ID and 4 bit checksum into 16 bit
     
     //wrappers for global functions
     void beginReceive(void);
-    void beginReceiveBytes(uint8_t maxBytes, uint8_t *data);
+    void beginReceiveArray(uint8_t maxBytes, uint8_t *data);
     uint8_t receiveComplete(void);
     uint16_t getMessage(void);
     void stopReceive(void);
@@ -157,9 +157,6 @@ extern "C"
     
     // fetch the received message
     extern uint16_t MANRX_GetMessage(void);
-    
-    // fetch the received message
-    extern void MANRX_GetMessageBytes(uint8_t *rcvdBytes, uint8_t **data);
     
     // stop receiving data
     extern void MANRX_StopReceive(void);
