@@ -69,6 +69,7 @@ body
 	text-decoration:underline;
 }
 
+#title a,
 .col2 a 
 {
 	color:#000000;
@@ -87,13 +88,6 @@ h2
 {
     border-bottom: 1px solid #CCCCCC;
     margin: 0px;
-    padding: 0px;    
-}
-
-h3
-{
-    border-bottom: 1px solid #CCCCCC;
-    margin: 16px 0 0;
     padding: 0px;    
 }
 
@@ -128,4 +122,4 @@ p
 	padding:8px;	
 }
 	
-.nav{ padding-left:15px; margin-top: 5px;}
+.nav{ padding-left:15px; }
