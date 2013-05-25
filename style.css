@@ -1,0 +1,131 @@
+/* CSS Document */
+
+#title
+{
+	border-color:#CCCCCC;
+	border-width:1px;
+	border-style:solid;
+	margin: 5px 15px;
+	padding: 10px;
+}
+
+/* General styles */
+body 
+{
+	margin:0;
+	padding:0;
+	border:0;			/* This removes the border around the viewport in old versions of IE */
+	width:100%;
+	background:#fff;
+	min-width:600px;    /* Minimum width of layout - remove line if not required */
+						/* The min-width property does not work in old versions of Internet Explorer */
+	font: 90% helvetica,arial,freesans,clean,sans-serif;
+}
+
+/* column container */
+.colmask 
+{
+	position:relative;		/* This fixes the IE7 overflow hidden bug and stops the layout jumping out of place */
+	clear:both;
+	float:left;
+	width:100%;			/* width of whole page */
+	overflow:hidden;	/* This chops off any overhanging divs */
+}
+.leftmenu .colright 
+{
+	float:left;
+	width:200%;
+	position:relative;
+	left:200px;
+	background:#fff;
+}
+.leftmenu .col1wrap 
+{
+	float:right;
+	width:50%;
+	position:relative;
+	right:200px;
+	padding-bottom:1em;
+}
+
+.leftmenu .col1 
+{
+	margin:0 15px 0 200px;
+	position:relative;
+	right:100%;
+	padding: 8px;
+}
+.leftmenu .col2 
+{
+	float:left;
+	width:170px;
+	position:relative;
+	right:185px;
+}
+
+.col1 a 
+{
+	color:#000000;
+	text-decoration:underline;
+}
+
+.col2 a 
+{
+	color:#000000;
+	text-decoration:none;
+}
+
+.col2 a:hover { border-bottom: 1px dotted #000; text-decoration: none; }
+
+h1
+{
+    margin: 0px;
+    padding: 0px;    
+}
+
+h2
+{
+    border-bottom: 1px solid #CCCCCC;
+    margin: 0px;
+    padding: 0px;    
+}
+
+h3
+{
+    border-bottom: 1px solid #CCCCCC;
+    margin: 16px 0 0;
+    padding: 0px;    
+}
+
+pre
+{
+    background-color: #F8F8F8;
+    border: 1px solid #CCCCCC;
+    border-radius: 3px 3px 3px 3px;
+    font-size: 13px;
+    line-height: 19px;
+    overflow: auto;
+    padding: 6px 10px;
+}
+
+p
+{
+    margin: 16px 0 0;
+    padding: 0;
+}
+
+.bold { font-weight: bold; }
+
+
+.navwrapper
+{
+	margin-top:5px;
+	border-color:#CCCCCC;
+	border-width:1px;
+	border-style:solid;
+	width: 154px;
+	background:#EFEFEF;
+	padding:8px;	
+}
+	
+.nav{ padding-left:15px; margin-top: 5px;}
