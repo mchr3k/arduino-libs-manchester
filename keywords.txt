@@ -1,7 +1,18 @@
-MANCHESTER	KEYWORD1
-SetTxPin	KEYWORD2
-Transmit	KEYWORD2
-SetRxPin	KEYWORD2
-Receive	KEYWORD2
-SetTimeOut	KEYWORD2
+man LITERAL1
+Manchester	KEYWORD1
+setTxPin	KEYWORD2
+setRxPin	KEYWORD2
+setupTransmit	KEYWORD2
+setupReceive	KEYWORD2
+setup	KEYWORD2
+transmit	KEYWORD2
+transmitBytes	KEYWORD2
+decodeMessage	KEYWORD2
+encodeMessage	KEYWORD2
+beginReceive	KEYWORD2
+beginReceiveBytes	KEYWORD2
+receiveComplete	KEYWORD2
+getMessage	KEYWORD2
+stopReceive	KEYWORD2
+workAround1MhzTinyCore  KEYWORD2
 
