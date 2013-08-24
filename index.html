@@ -3,9 +3,40 @@ layout: default
 title: Home
 ---
 
-<p>This is a Manchester encoding RF library which works on Arduino and ATTiny.
+<p>This is a <a href="http://en.wikipedia.org/wiki/Manchester_code">Manchester encoding</a> RF library which works on Arduino and ATTiny.
 
-<p>Note: I am currently using this library with IDE 1.0.
+<p>Library supports:
+
+<ul>
+<li>various microcontrollers
+<ul>
+<li>ATmega328
+<li>ATmega8
+<li>ATMega32U4
+<li>ATtiny84 (44, 24)
+<li>ATtiny85 (45, 85)
+
+
+<li>various microcontroller's speed both RX and TX
+<ul>
+<li>1Mhz (see notes for TX)
+<li>8Mhz
+<li>16Mhz
+<li>16.5Mhz ATtiny85
+
+<li>various transmission speeds
+<ul>
+<li>300baud
+<li>600baud
+<li>1200baud
+<li>2400baud
+<li>4800baud
+<li>9600baud
+<li>19200baud
+</ul>
+</ul>
+
+With this library you can sucessfully transmit data between various microcontrollers runnning at various speeds even if their clock speed varies up to 100%. Works great with innacurate internal oscilator. Your maximum transmission speed will depend on many factors like transmitter type, antenna, distance, enviroment noise, microcontroller type and speed
 <br><br>
 <h2>Getting started on Arduino</h2>
 
@@ -16,112 +47,94 @@ title: Home
     
 <li>Import the library from your Arduino sketch
 
-<pre class="prettyprint lang-c">#include &lt;MANCHESTER.h&gt;</pre>
+<pre class="prettyprint lang-c">#include &lt;Manchester.h&gt;</pre>
     
 <li>Modify your setup() method.
 
-<p>For receiving 16 bits of data at a time:
+<p>For sending data
 
 <pre class="prettyprint lang-c">
-    void setup()
-    {
-      // Set digital RX pin
-      MANRX_SetRxPin(4);
-      // Prepare interrupts
-      MANRX_SetupReceive();
-      // Begin receiving data
-      MANRX_BeginReceive();
-    }
+void setup()
+{
+  man.setupTransmit(TX_PIN, MAN_1200);
+}
 </pre>
 	
-<p>For receiving arrays of 8 bit values:
-   
+<p>For receiving data
+
 <pre class="prettyprint lang-c">   
-    unsigned char bufferSize = 10;
-    unsigned char bufferData[bufferSize];
-    void setup()
-    {
-      // Set digital RX pin
-      MANRX_SetRxPin(4);
-      // Prepare interrupts
-      MANRX_SetupReceive();
-      // Begin receiving data
-      MANRX_BeginReceiveBytes(bufferSize, bufferData);
-    }
+void setup()
+{
+  man.setupReceive(RX_PIN, MAN_1200);
+  man.beginReceive();
+}
 </pre>
-	
-<p>For sending data:
+		
+<li>4) Modify your main loop
+
+<p>For sending data
 
 <pre class="prettyprint lang-c">
-    void setup() 
-    {  
-      MANCHESTER.SetTxPin(4);
-      MANCHESTER.SetTimeOut(1000);
-    }
+void loop() {
+  man.transmit(transmit_data);
+}
 </pre>
-	
-<li>Modify your main code.
 
-<p>Sending 16 bits of data:
+<p>For receiving data
 
 <pre class="prettyprint lang-c">
-    unsigned int data = 1234;
-    MANCHESTER.Transmit(data);
+void loop() {
+  if (man.receiveComplete()) {
+    uint16_t m = man.getMessage();
+    man.beginReceive(); //start listening for next message right after you retrieve the message
+    //do something with your message here
+  }
+}  
 </pre>
-	
-<p>Sending an array of 8 bit values:
-
-<pre class="prettyprint lang-c">
-    char[] data = new char[3];
-    data[0] = 1;
-    data[1] = 2;
-    data[2] = 3;
-    MANCHESTER.TransmitBytes(3, &data);
-</pre>
-
-<p>Receive 16 bits of data:
-
-<pre class="prettyprint lang-c">
-    if (MANRX_ReceiveComplete())
-    {
-      unsigned int data = MANRX_GetMessage();
-      MANRX_BeginReceive();
-      // Handle data...
-    }
-</pre>
-
-<p>Receive an array of 8 bit values:
-
-<pre class="prettyprint lang-c">
-    if (MANRX_ReceiveComplete())
-    {
-      unsigned char receivedSize = 0;
-      MANRX_GetMessageBytes(&receivedSize, &bufferData);
-      // Handle/copy data...
-      MANRX_BeginReceiveBytes(bufferSize, bufferData);
-    }
-</pre>
-
+<li> For more advanced uses like transmitting with checksum and sender/receiver address or sending array of bytes see attached examples 
 </ol>
 
 <h2>Getting started on ATtiny85</h2>
 
-<p>This is broadly the same as on Arduino with one extra step. You need to download the 
-<a href="https://github.com/downloads/mchr3k/arduino-libs-manchester/tiny.zip">ATtiny hardware files</a> (a list of
-alternative ATtiny implementations is listed on <a href="http://code.google.com/p/arduino-tiny/">this site</a> which
-is where I got the files in tiny.zip).
+<p>This is broadly the same as on Arduino with one extra step. You need to download the ATtiny hardware files 
+(a list of alternative ATtiny implementations is listed on this site which is where I got the files in tiny.zip). 
+These should be unzipped into the following location.
 
-<p>These should be unzipped into the following location.
+<pre>
+workspace_root/hardware/tiny
+</pre>
 
-<pre>workspace_root/hardware/tiny</pre>
+<p>As of now (June 2013) most of tiny cores does not support micro delay at 1Mhz and for that reason if you want 
+to TRANSMIT (receive is OK) from your 1Mhz ATtiny85/84 you need to call this method before you call transmit setup:
+
+<pre>
+man.workAround1MhzTinyCore(); //add this in order for transmitter to work with 1Mhz Attiny85/84
+man.setupTransmit(TX_PIN, MAN_1200);
+</pre>
+
+<h2>Notes about transmitters</h2>
+
+<p>The library has been tested with common 315Mhz and 433Mhz transmitters using ASK OOK. Tips to improve your 
+transmit distance: Attaching an antenna will greatly improve transmit distance (from few cm to few m) for 315Mhz use 
+23.81 cm straight wire, for 433Mhz use 17.28cm straight wire as antenna. If possible keep the wire straight, away from 
+ground wire, and away from the rest of the circuit and battery pack. Transmitter can use anything from 3.3V to 12V. 
+Increasing voltage will increase transmit distance. If you are using voltage regulator, attach transmitter directly to 
+the battery. Receiver needs 5V, it doesn't work on 3.3V
+
+<p>Speed: I was able to achieve 9600 bauds between two 16Mhz Arduinos, or 2400 bauds between two 1Mhz ATTiny85, you 
+can try different speeds to see which works the best for you.
+
+<p>Full duplex: for bidirectional communication use both 315Mhz and 433Mhz transmitters. This way they can transmit 
+at the same time without interfering with each other. If you have just one type, wait for receiver to finish receiving 
+before transmitting. 
 
 <h2>Credits</h2>
 
 <ul>
 <li>Library originally from <a href="http://arduino.cc/forum/index.php?action=profile;u=14566">carl47</a> on 
 <a href="http://arduino.cc/forum/index.php/topic,63755.0.html">this thread</a>
-<li>Contributions from <a href="http://mchr3k-arduino.blogspot.com/">mchr3k</a> and 
-<a href="https://github.com/MichaelBell/Arduino-sketches">Mike</a>
+<li>Contributions from <a href="http://mchr3k-arduino.blogspot.com/">mchr3k</a>, 
+<a href="https://github.com/MichaelBell/Arduino-sketches">Mike</a> and <a href="https://github.com/cano64">Cano</a>
 </ul>
 
 <h2>Blog posts</h2>
