@@ -290,19 +290,13 @@ void MANRX_SetupReceive(uint8_t speedFactor)
 
     #if F_CPU == 1000000UL
       TCCR1A = 0;
-      TCCR1B =  _BV(WGM12) | _BV(CS11); // reset counter on match, 1/8 prescaler
+      TCCR1B = _BV(WGM12) | _BV(CS11); // reset counter on match, 1/8 prescaler
       OCR1A = (64 >> speedFactor) - 1; 
     #elif F_CPU == 8000000UL
       TCCR1B = _BV(WGM12) | _BV(CS12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
       OCR1A = (64 >> speedFactor) - 1; 
-    #elif F_CPU == 16000000UL
-      TCCR1B = _BV(WGM12) | _BV(CS12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
-      OCR1A = (128 >> speedFactor) - 1; 
-    #elif F_CPU == 16500000UL     
-      TCCR1B = _BV(WGM12) | _BV(CS12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
-      OCR1A = (132 >> speedFactor) - 1; 
     #else
-    #error "Manchester library only supports 1mhz, 8mhz, 16mhz, 16.5Mhz clock speeds on ATtiny85 chip"
+    #error "Manchester library only supports 1mhz, 8mhz clock speeds on ATtiny2313 chip"
     #endif
     
     OCR1B = 0; // Trigger interrupt when TCNT1 is reset to 0
