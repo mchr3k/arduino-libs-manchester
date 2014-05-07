@@ -279,6 +279,30 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     TIMSK |= _BV(OCIE1A); // Turn on interrupt
     TCNT1 = 0; // Set counter to 0
 
+  #elif defined( __AVR_ATtinyX313__ )
+
+    /*
+    Timer 1 is used with a ATtiny2313. 
+    http://www.atmel.com/Images/doc2543.pdf page 107
+    How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 1953.125
+    OCR1A/B are 8 bit registers
+    */
+
+    #if F_CPU == 1000000UL
+      TCCR1A = 0;
+      TCCR1B = _BV(WGM12) | _BV(CS11); // reset counter on match, 1/8 prescaler
+      OCR1A = (64 >> speedFactor) - 1; 
+    #elif F_CPU == 8000000UL
+      TCCR1B = _BV(WGM12) | _BV(CS12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
+      OCR1A = (64 >> speedFactor) - 1; 
+    #else
+    #error "Manchester library only supports 1mhz, 8mhz clock speeds on ATtiny2313 chip"
+    #endif
+    
+    OCR1B = 0; // Trigger interrupt when TCNT1 is reset to 0
+    TIMSK |= _BV(OCIE1B); // Turn on interrupt
+    TCNT1 = 0; // Set counter to 0
+
   #elif defined( __AVR_ATtinyX4__ )
 
     /*
@@ -445,6 +469,8 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
 }
 #if defined( __AVR_ATtinyX5__ )
 ISR(TIMER1_COMPA_vect)
+#elif defined( __AVR_ATtinyX313__ )
+ISR(TIMER1_COMPB_vect)
 #elif defined( __AVR_ATtinyX4__ )
 ISR(TIM1_COMPA_vect)
 #elif defined(__AVR_ATmega32U4__)
