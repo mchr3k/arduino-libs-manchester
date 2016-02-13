@@ -82,7 +82,8 @@ allowing us to transmit even with up to 100% in clock speed difference
 // when using 0 to sync, sending SYNC_PULSE_DEF 0's , and send a 1 to start data.
 //                       and end the transimitting by three 0's
 
-#define     SYNC_BIT_VALUE      1
+#define     SYNC_BIT_VALUE      0
+//decoding not finished.
 //#define     SYNC_BIT_VALUE      0
 
 
