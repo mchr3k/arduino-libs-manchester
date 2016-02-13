@@ -136,12 +136,20 @@ The receiver is then operating correctly and we have locked onto the transmissio
 */
 void Manchester::transmitArray(uint8_t numBytes, uint8_t *data)
 {
-  // Send 14 0's
-  for( int16_t i = 0; i < 14; i++) //send capture pulses
+
+#if SYNC_BIT_VALUE
+  for( int8_t i = 0; i < SYNC_PULSE_DEF; i++) //send capture pulses
+  {
+    sendOne(); //end of capture pulses
+  }
+  sendZero(); //start data pulse
+#else
+  for( int8_t i = 0; i < SYNC_PULSE_DEF; i++) //send capture pulses
+  {
     sendZero(); //end of capture pulses
- 
-  // Send a single 1
+  }
   sendOne(); //start data pulse
+#endif
  
   // Send the user data
   for (uint8_t i = 0; i < numBytes; i++)
@@ -158,9 +166,16 @@ void Manchester::transmitArray(uint8_t numBytes, uint8_t *data)
     }//end of byte
   }//end of data
 
-  // Send 2 terminatings 0's to correctly terminate the previous bit and to turn the transmitter off
-  sendZero(); 
+  // Send 3 terminatings 0's to correctly terminate the previous bit and to turn the transmitter off
+#if SYNC_BIT_VALUE
+  sendOne();
+  sendOne();
+  sendOne();
+#else
   sendZero();
+  sendZero();
+  sendZero();
+#endif
 }//end of send the data
 
 

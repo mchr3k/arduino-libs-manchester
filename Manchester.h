@@ -59,21 +59,31 @@ to be compatible with those values. We allow about 50% clock speed difference bo
 allowing us to transmit even with up to 100% in clock speed difference
 */
 
-//HI,LO,LO,HI RX_MODE_SYNC
-// the sync pulse number for transmitting and receiving.
+// added by caoxp@github
+// 
+// the sync pulse amount for transmitting and receiving.
 // a pulse means : HI,LO   or  LO,HI   
 // usually SYNC_PULSE_MAX >= SYNC_PULSE_DEF + 2
 //         SYNC_PULSE_MIN <= SYNC_PULSE_DEF + 2
 //  consider the pulses rising when starting transmitting.
 //  SYNC_PULSE_MIN should be much less than SYNC_PULSE_DEF
+//  all maximum of 255
+#define     SYNC_PULSE_MIN  1
+#define     SYNC_PULSE_DEF  3
+#define     SYNC_PULSE_MAX  5
 
-#define		SYNC_PULSE_MIN	10
-#define		SYNC_PULSE_DEF	14
-#define		SYNC_PULSE_MAX	16
+//#define       SYNC_PULSE_MIN  10
+//#define       SYNC_PULSE_DEF  14
+//#define       SYNC_PULSE_MAX  16
 
-//#define     SYNC_PULSE_MIN  1
-//#define     SYNC_PULSE_DEF  3
-//#define     SYNC_PULSE_MAX  5
+//define to use 1 or 0 to sync
+// when using 1 to sync, sending SYNC_PULSE_DEF 1's , and send a 0 to start data.
+//                       and end the transimitting by three 1's
+// when using 0 to sync, sending SYNC_PULSE_DEF 0's , and send a 1 to start data.
+//                       and end the transimitting by three 0's
+
+#define     SYNC_BIT_VALUE      1
+//#define     SYNC_BIT_VALUE      0
 
 
 /*
