@@ -59,6 +59,22 @@ to be compatible with those values. We allow about 50% clock speed difference bo
 allowing us to transmit even with up to 100% in clock speed difference
 */
 
+//HI,LO,LO,HI RX_MODE_SYNC
+// the sync pulse number for transmitting and receiving.
+// a pulse means : HI,LO   or  LO,HI   
+// usually SYNC_PULSE_MAX >= SYNC_PULSE_DEF + 2
+//         SYNC_PULSE_MIN <= SYNC_PULSE_DEF + 2
+//  consider the pulses rising when starting transmitting.
+//  SYNC_PULSE_MIN should be much less than SYNC_PULSE_DEF
+
+#define		SYNC_PULSE_MIN	10
+#define		SYNC_PULSE_DEF	14
+#define		SYNC_PULSE_MAX	16
+
+//#define     SYNC_PULSE_MIN  1
+//#define     SYNC_PULSE_DEF  3
+//#define     SYNC_PULSE_MAX  5
+
 
 /*
 	Signal timing, we take sample every 8 clock ticks
@@ -73,10 +89,10 @@ allowing us to transmit even with up to 100% in clock speed difference
 */
 
 //setup timing for receiver
-#define MinCount 33 //pulse lower count limit on capture
-#define MaxCount 65 //pulse higher count limit on capture
-#define MinLongCount 66 //pulse lower count on double pulse
-#define MaxLongCount 129 //pulse higher count on double pulse
+#define MinCount        33  //pulse lower count limit on capture
+#define MaxCount        65  //pulse higher count limit on capture
+#define MinLongCount    66  //pulse lower count on double pulse
+#define MaxLongCount    129 //pulse higher count on double pulse
 
 //setup timing for transmitter
 #define HALF_BIT_INTERVAL 3072 //(=48 * 1024 * 1000000 / 16000000Hz) microseconds for speed factor 0 (300baud)

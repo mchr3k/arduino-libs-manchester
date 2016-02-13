@@ -512,8 +512,8 @@ ISR(TIMER2_COMPA_vect)
       // Initial sync block
       if (transition)
       {
-        if(((rx_sync_count < 20) || (rx_last_sample == 1)) &&
-           ((rx_count < MinCount) || (rx_count > MaxCount)))
+        if( ( (rx_sync_count < (SYNC_PULSE_MIN * 2) )  || (rx_last_sample == 1)  ) &&
+            ( (rx_count < MinCount) || (rx_count > MaxCount)))
         {
           // First 20 bits and all 1 bits are expected to be regular
           // Transition was too slow/fast
@@ -531,19 +531,19 @@ ISR(TIMER2_COMPA_vect)
           rx_sync_count++;
           
           if((rx_last_sample == 0) &&
-             (rx_sync_count >= 20) &&
+             (rx_sync_count >= (SYNC_PULSE_MIN * 2) ) &&
              (rx_count >= MinLongCount))
           {
             // We have seen at least 10 regular transitions
             // Lock sequence ends with unencoded bits 01
             // This is encoded and TX as HI,LO,LO,HI
             // We have seen a long low - we are now locked!
-            rx_mode = RX_MODE_DATA;
+            rx_mode    = RX_MODE_DATA;
             rx_manBits = 0;
-            rx_numMB = 0;
+            rx_numMB   = 0;
             rx_curByte = 0;
           }
-          else if (rx_sync_count >= 32)
+          else if (rx_sync_count >= (SYNC_PULSE_MAX * 2) )
           {
             rx_mode = RX_MODE_PRE;
           }
