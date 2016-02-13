@@ -464,6 +464,15 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
     }
     data[*curByte] = newData ^ DECOUPLING_MASK;
     (*curByte)++;
+
+    // added by caoxp @ https://github.com/caoxp
+    // compatible with unfixed-length data, with the data length defined by the first byte.
+	// at a maximum of 255 total data length.
+    if( (*curByte) == 1)
+    {
+      rx_maxBytes = data[0];
+    }
+    
     *numMB = 0;
   }
 }

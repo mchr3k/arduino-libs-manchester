@@ -21,21 +21,33 @@
 
 */
 
-#define TX_PIN 5  //pin where your transmitter is connected
+#define TX_PIN  5  //pin where your transmitter is connected
 #define LED_PIN 13 //pin for blinking LED
 
 uint8_t moo = 1; //last led status
-uint8_t data[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+uint8_t data[20] = {11, '1','2', '3', '4', '5', '6', '7', '8', '9','1','2','3','4','5','6','7','8','9'};
 
-void setup() {
+void setup() 
+{
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, moo);
   man.workAround1MhzTinyCore(); //add this in order for transmitter to work with 1Mhz Attiny85/84
   man.setupTransmit(TX_PIN, MAN_1200);
 }
 
-void loop() {
-  man.transmitArray(10, data);
+
+uint8_t datalength=2;   //at least two data
+void loop() 
+{
+
+  data[0] = datalength;
+
+  man.transmitArray(datalength, data);
   moo = ++moo % 2;
   digitalWrite(LED_PIN, moo);
+
+
+  delay(800);
+  datalength++;
+  if(datalength>18) datalength=2;
 }
