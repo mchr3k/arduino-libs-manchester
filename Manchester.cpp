@@ -491,6 +491,9 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
     *numMB = 0;
   }
 }
+
+
+
 #if defined( __AVR_ATtinyX5__ )
 ISR(TIMER1_COMPA_vect)
 #elif defined( __AVR_ATtinyX313__ )
@@ -509,7 +512,21 @@ ISR(TIMER2_COMPA_vect)
     rx_count += 8;
     
     // Check for value change
-    rx_sample = digitalRead(RxPin);
+    //rx_sample = digitalRead(RxPin);
+    // caoxp@github, 
+    // add filter.
+    // sample twice, only the same means a change.
+    static uint8_t rx_sample_0=0;
+    static uint8_t rx_sample_1=0;
+    rx_sample_1 = digitalRead(RxPin);
+    if( rx_sample_1 == rx_sample_0 )
+    {
+      rx_sample = rx_sample_1;
+    }
+    rx_sample_0 = rx_sample_1;
+
+
+    //check sample transition
     uint8_t transition = (rx_sample != rx_last_sample);
   
     if (rx_mode == RX_MODE_PRE)

@@ -1,5 +1,5 @@
 
-#include <Manchester.h>
+#include "Manchester.h"
 
 /*
 
@@ -33,7 +33,7 @@ void setup()
   pinMode(LED_PIN, OUTPUT);  
   digitalWrite(LED_PIN, moo);
   Serial.begin(19200);
-  man.setupReceive(RX_PIN, MAN_1200);
+  man.setupReceive(RX_PIN, MAN_9600);
   man.beginReceiveArray(BUFFER_SIZE, buffer);
 }
 

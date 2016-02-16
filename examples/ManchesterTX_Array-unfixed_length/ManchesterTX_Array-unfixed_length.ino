@@ -32,7 +32,7 @@ void setup()
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, moo);
   man.workAround1MhzTinyCore(); //add this in order for transmitter to work with 1Mhz Attiny85/84
-  man.setupTransmit(TX_PIN, MAN_1200);
+  man.setupTransmit(TX_PIN, MAN_9600);
 }
 
 
