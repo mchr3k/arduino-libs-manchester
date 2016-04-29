@@ -303,7 +303,7 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     TIMSK |= _BV(OCIE1B); // Turn on interrupt
     TCNT1 = 0; // Set counter to 0
 
-  #elif defined( __AVR_ATtinyX4__ )
+  #elif defined( __AVR_ATtiny84__ )
 
     /*
     Timer 1 is used with a ATtiny84. 
@@ -312,12 +312,14 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     OCR1A is 8 bit register
     */
 
+	TCCR1A = 0;
+
     #if F_CPU == 1000000UL
       TCCR1B = _BV(WGM12) | _BV(CS11); // 1/8 prescaler
       OCR1A = (64 >> speedFactor) - 1; 
     #elif F_CPU == 8000000UL
       TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
-      OCR1A = (64 >> speedFactor) - 1; 
+      OCR1A = (64 >> speedFactor) - 1;
     #elif F_CPU == 16000000UL
       TCCR1B = _BV(WGM12) | _BV(CS11) | _BV(CS10); // 1/64 prescaler
       OCR1A = (128 >> speedFactor) - 1; 
@@ -467,11 +469,12 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
     *numMB = 0;
   }
 }
+
 #if defined( __AVR_ATtinyX5__ )
 ISR(TIMER1_COMPA_vect)
 #elif defined( __AVR_ATtinyX313__ )
 ISR(TIMER1_COMPB_vect)
-#elif defined( __AVR_ATtinyX4__ )
+#elif defined( __AVR_ATtiny84__ )
 ISR(TIM1_COMPA_vect)
 #elif defined(__AVR_ATmega32U4__)
 ISR(TIMER3_COMPA_vect)
