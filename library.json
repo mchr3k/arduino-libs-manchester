@@ -1,0 +1,16 @@
+{
+	"name": "Manchester",
+	"keywords": "rf, radio, wireless",
+	"description": "This is a Manchester encoding RF library which works on Arduino and ATTiny.",
+	"authors": {
+		"name": "mchr3k",
+		"url": "https://github.com/mchr3k/arduino-libs-manchester"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mchr3k/arduino-libs-manchester.git"
+	},	
+	"version": "1.0",
+	"frameworks": "arduino",
+	"platforms": ["atmelavr"]
+}
