@@ -59,6 +59,33 @@ to be compatible with those values. We allow about 50% clock speed difference bo
 allowing us to transmit even with up to 100% in clock speed difference
 */
 
+// added by caoxp@github
+// 
+// the sync pulse amount for transmitting and receiving.
+// a pulse means : HI,LO   or  LO,HI   
+// usually SYNC_PULSE_MAX >= SYNC_PULSE_DEF + 2
+//         SYNC_PULSE_MIN <= SYNC_PULSE_DEF + 2
+//  consider the pulses rising when starting transmitting.
+//  SYNC_PULSE_MIN should be much less than SYNC_PULSE_DEF
+//  all maximum of 255
+#define     SYNC_PULSE_MIN  1
+#define     SYNC_PULSE_DEF  3
+#define     SYNC_PULSE_MAX  5
+
+//#define       SYNC_PULSE_MIN  10
+//#define       SYNC_PULSE_DEF  14
+//#define       SYNC_PULSE_MAX  16
+
+//define to use 1 or 0 to sync
+// when using 1 to sync, sending SYNC_PULSE_DEF 1's , and send a 0 to start data.
+//                       and end the transimitting by three 1's
+// when using 0 to sync, sending SYNC_PULSE_DEF 0's , and send a 1 to start data.
+//                       and end the transimitting by three 0's
+
+#define     SYNC_BIT_VALUE      0
+//decoding not finished.
+//#define     SYNC_BIT_VALUE      0
+
 
 /*
 	Signal timing, we take sample every 8 clock ticks
@@ -73,10 +100,10 @@ allowing us to transmit even with up to 100% in clock speed difference
 */
 
 //setup timing for receiver
-#define MinCount 33 //pulse lower count limit on capture
-#define MaxCount 65 //pulse higher count limit on capture
-#define MinLongCount 66 //pulse lower count on double pulse
-#define MaxLongCount 129 //pulse higher count on double pulse
+#define MinCount        33  //pulse lower count limit on capture
+#define MaxCount        65  //pulse higher count limit on capture
+#define MinLongCount    66  //pulse lower count on double pulse
+#define MaxLongCount    129 //pulse higher count on double pulse
 
 //setup timing for transmitter
 #define HALF_BIT_INTERVAL 3072 //(=48 * 1024 * 1000000 / 16000000Hz) microseconds for speed factor 0 (300baud)

@@ -136,12 +136,20 @@ The receiver is then operating correctly and we have locked onto the transmissio
 */
 void Manchester::transmitArray(uint8_t numBytes, uint8_t *data)
 {
-  // Send 14 0's
-  for( int16_t i = 0; i < 14; i++) //send capture pulses
+
+#if SYNC_BIT_VALUE
+  for( int8_t i = 0; i < SYNC_PULSE_DEF; i++) //send capture pulses
+  {
+    sendOne(); //end of capture pulses
+  }
+  sendZero(); //start data pulse
+#else
+  for( int8_t i = 0; i < SYNC_PULSE_DEF; i++) //send capture pulses
+  {
     sendZero(); //end of capture pulses
- 
-  // Send a single 1
+  }
   sendOne(); //start data pulse
+#endif
  
   // Send the user data
   for (uint8_t i = 0; i < numBytes; i++)
@@ -158,9 +166,16 @@ void Manchester::transmitArray(uint8_t numBytes, uint8_t *data)
     }//end of byte
   }//end of data
 
-  // Send 2 terminatings 0's to correctly terminate the previous bit and to turn the transmitter off
-  sendZero(); 
+  // Send 3 terminatings 0's to correctly terminate the previous bit and to turn the transmitter off
+#if SYNC_BIT_VALUE
+  sendOne();
+  sendOne();
+  sendOne();
+#else
   sendZero();
+  sendZero();
+  sendZero();
+#endif
 }//end of send the data
 
 
@@ -464,9 +479,21 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
     }
     data[*curByte] = newData ^ DECOUPLING_MASK;
     (*curByte)++;
+
+    // added by caoxp @ https://github.com/caoxp
+    // compatible with unfixed-length data, with the data length defined by the first byte.
+	// at a maximum of 255 total data length.
+    if( (*curByte) == 1)
+    {
+      rx_maxBytes = data[0];
+    }
+    
     *numMB = 0;
   }
 }
+
+
+
 #if defined( __AVR_ATtinyX5__ )
 ISR(TIMER1_COMPA_vect)
 #elif defined( __AVR_ATtinyX313__ )
@@ -485,7 +512,21 @@ ISR(TIMER2_COMPA_vect)
     rx_count += 8;
     
     // Check for value change
-    rx_sample = digitalRead(RxPin);
+    //rx_sample = digitalRead(RxPin);
+    // caoxp@github, 
+    // add filter.
+    // sample twice, only the same means a change.
+    static uint8_t rx_sample_0=0;
+    static uint8_t rx_sample_1=0;
+    rx_sample_1 = digitalRead(RxPin);
+    if( rx_sample_1 == rx_sample_0 )
+    {
+      rx_sample = rx_sample_1;
+    }
+    rx_sample_0 = rx_sample_1;
+
+
+    //check sample transition
     uint8_t transition = (rx_sample != rx_last_sample);
   
     if (rx_mode == RX_MODE_PRE)
@@ -503,8 +544,8 @@ ISR(TIMER2_COMPA_vect)
       // Initial sync block
       if (transition)
       {
-        if(((rx_sync_count < 20) || (rx_last_sample == 1)) &&
-           ((rx_count < MinCount) || (rx_count > MaxCount)))
+        if( ( (rx_sync_count < (SYNC_PULSE_MIN * 2) )  || (rx_last_sample == 1)  ) &&
+            ( (rx_count < MinCount) || (rx_count > MaxCount)))
         {
           // First 20 bits and all 1 bits are expected to be regular
           // Transition was too slow/fast
@@ -522,19 +563,19 @@ ISR(TIMER2_COMPA_vect)
           rx_sync_count++;
           
           if((rx_last_sample == 0) &&
-             (rx_sync_count >= 20) &&
+             (rx_sync_count >= (SYNC_PULSE_MIN * 2) ) &&
              (rx_count >= MinLongCount))
           {
             // We have seen at least 10 regular transitions
             // Lock sequence ends with unencoded bits 01
             // This is encoded and TX as HI,LO,LO,HI
             // We have seen a long low - we are now locked!
-            rx_mode = RX_MODE_DATA;
+            rx_mode    = RX_MODE_DATA;
             rx_manBits = 0;
-            rx_numMB = 0;
+            rx_numMB   = 0;
             rx_curByte = 0;
           }
-          else if (rx_sync_count >= 32)
+          else if (rx_sync_count >= (SYNC_PULSE_MAX * 2) )
           {
             rx_mode = RX_MODE_PRE;
           }
