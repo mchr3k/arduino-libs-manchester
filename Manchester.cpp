@@ -265,7 +265,7 @@ void MANRX_SetupReceive(uint8_t speedFactor)
   pinMode(RxPin, INPUT);
   //setup timers depending on the microcontroller used
 
-  #if defined( __AVR_ATtinyX5__ )
+  #if defined( __AVR_ATtiny25__ ) || defined( __AVR_ATtiny45__ ) || defined( __AVR_ATtiny85__ )
 
     /*
     Timer 1 is used with a ATtiny85. 
@@ -294,7 +294,7 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     TIMSK |= _BV(OCIE1A); // Turn on interrupt
     TCNT1 = 0; // Set counter to 0
 
-  #elif defined( __AVR_ATtinyX313__ )
+  #elif defined( __AVR_ATtiny2313__ ) || defined( __AVR_ATtiny2313A__ ) || defined( __AVR_ATtiny4313__ )
 
     /*
     Timer 1 is used with a ATtiny2313. 
@@ -318,7 +318,7 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     TIMSK |= _BV(OCIE1B); // Turn on interrupt
     TCNT1 = 0; // Set counter to 0
 
-  #elif defined( __AVR_ATtinyX4__ )
+  #elif defined( __AVR_ATtiny24__ ) || defined( __AVR_ATtiny24A__ ) || defined( __AVR_ATtiny44__ ) || defined( __AVR_ATtiny44A__ ) || defined( __AVR_ATtiny84__ ) || defined( __AVR_ATtiny84A__ )
 
     /*
     Timer 1 is used with a ATtiny84. 
@@ -494,11 +494,11 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
 
 
 
-#if defined( __AVR_ATtinyX5__ )
+#if defined( __AVR_ATtiny25__ ) || defined( __AVR_ATtiny45__ ) || defined( __AVR_ATtiny85__ )
 ISR(TIMER1_COMPA_vect)
-#elif defined( __AVR_ATtinyX313__ )
+#elif defined( __AVR_ATtiny2313__ ) || defined( __AVR_ATtiny2313A__ ) || defined( __AVR_ATtiny4313__ )
 ISR(TIMER1_COMPB_vect)
-#elif defined( __AVR_ATtinyX4__ )
+#elif defined( __AVR_ATtiny24__ ) || defined( __AVR_ATtiny24A__ ) || defined( __AVR_ATtiny44__ ) || defined( __AVR_ATtiny44A__ ) || defined( __AVR_ATtiny84__ ) || defined( __AVR_ATtiny84A__ )
 ISR(TIM1_COMPA_vect)
 #elif defined(__AVR_ATmega32U4__)
 ISR(TIMER3_COMPA_vect)
