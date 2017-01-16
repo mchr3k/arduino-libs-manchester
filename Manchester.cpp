@@ -286,7 +286,7 @@ void MANRX_SetupReceive(uint8_t speedFactor)
    timer0_attachInterrupt(timer0_ISR);
    timer0_write(ESP.getCycleCount() + ESPtimer); //80Mhz -> 128us
    interrupts();
-  #elif defined( __AVR_ATtinyX5__ )
+  #elif defined( __AVR_ATtiny25__ ) || defined( __AVR_ATtiny45__ ) || defined( __AVR_ATtiny85__ )
 
     /*
     Timer 1 is used with a ATtiny85. 
