@@ -140,7 +140,7 @@ class Manchester
     void setupReceive(uint8_t pin, uint8_t SF = MAN_1200); //set up receiver
     void setup(uint8_t Tpin, uint8_t Rpin, uint8_t SF = MAN_1200); //set up receiver
     
-    void transmit(uint16_t data); //transmit 16 bits of data
+    void transmit(uint8_t data); //transmit 16 bits of data
     void transmitArray(uint8_t numBytes, uint8_t *data); // transmit array of bytes
     
     uint8_t decodeMessage(uint16_t m, uint8_t &id, uint8_t &data); //decode 8 bit payload and 4 bit ID from the message, return 1 of checksum is correct, otherwise 0
@@ -150,7 +150,7 @@ class Manchester
     void beginReceive(void);
     void beginReceiveArray(uint8_t maxBytes, uint8_t *data);
     uint8_t receiveComplete(void);
-    uint16_t getMessage(void);
+    uint8_t getMessage(void);
     void stopReceive(void);
     uint8_t speedFactor;
     uint16_t delay1;
@@ -183,7 +183,7 @@ extern "C"
     extern uint8_t MANRX_ReceiveComplete(void);
     
     // fetch the received message
-    extern uint16_t MANRX_GetMessage(void);
+    extern uint8_t MANRX_GetMessage(void);
     
     // stop receiving data
     extern void MANRX_StopReceive(void);
