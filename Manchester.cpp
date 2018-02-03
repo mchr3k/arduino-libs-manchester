@@ -115,9 +115,9 @@ void Manchester::setup(uint8_t Tpin, uint8_t Rpin, uint8_t SF)
 }
 
 
-void Manchester::transmit(uint16_t data)
+void Manchester::transmit(uint8_t data)
 {
-  uint8_t byteData[2] = {data >> 8, data & 0xFF};
+  uint8_t byteData[2] = {2, data};
   transmitArray(2, byteData);
 }
 
@@ -251,7 +251,7 @@ uint8_t Manchester::receiveComplete(void)
 }
 
 
-uint16_t Manchester::getMessage(void)
+uint8_t Manchester::getMessage(void)
 {
   return ::MANRX_GetMessage();
 }
@@ -467,7 +467,7 @@ uint8_t MANRX_ReceiveComplete(void)
   return (rx_mode == RX_MODE_MSG);
 }
 
-uint16_t MANRX_GetMessage(void)
+uint8_t MANRX_GetMessage(void)
 {
   return (((int16_t)rx_data[0]) << 8) | (int16_t)rx_data[1];
 }
