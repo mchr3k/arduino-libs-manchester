@@ -82,6 +82,9 @@ void Manchester::setupTransmit(uint8_t pin, uint8_t SF)
     uint16_t compensationFactor = 4; 
   #endif  
 
+#if (F_CPU == 80000000UL) || (F_CPU == 160000000)   // ESP8266 80MHz or 160 MHz
+  delay1 = delay2 = (HALF_BIT_INTERVAL >> speedFactor) - 2;
+#else
   delay1 = (HALF_BIT_INTERVAL >> speedFactor) - compensationFactor;
   delay2 = (HALF_BIT_INTERVAL >> speedFactor) - 2;
   
@@ -93,7 +96,8 @@ void Manchester::setupTransmit(uint8_t pin, uint8_t SF)
       delay1 >>= 3;
       delay2 >>= 3;
     }
-  #endif  
+  #endif
+#endif
 }
 
 
@@ -260,12 +264,29 @@ void Manchester::stopReceive(void)
 
 //global functions
 
+#if defined( ESP8266 )
+   volatile uint16_t ESPtimer = 0;
+   void timer0_ISR (void);
+#endif
+
 void MANRX_SetupReceive(uint8_t speedFactor)
 {
   pinMode(RxPin, INPUT);
   //setup timers depending on the microcontroller used
 
-  #if defined( __AVR_ATtinyX5__ )
+  #if defined( ESP8266 )
+   #if F_CPU == 80000000
+      ESPtimer = (512 >> speedFactor) * 80;  // 8MHZ, 300us for MAN_300, 128us for MAN_1200
+   #elif F_CPU == 160000000
+      ESPtimer = (512 >> speedFactor) * 160;
+   #endif
+
+   noInterrupts();
+   timer0_isr_init();
+   timer0_attachInterrupt(timer0_ISR);
+   timer0_write(ESP.getCycleCount() + ESPtimer); //80Mhz -> 128us
+   interrupts();
+  #elif defined( __AVR_ATtiny25__ ) || defined( __AVR_ATtiny45__ ) || defined( __AVR_ATtiny85__ )
 
     /*
     Timer 1 is used with a ATtiny85. 
@@ -294,7 +315,7 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     TIMSK |= _BV(OCIE1A); // Turn on interrupt
     TCNT1 = 0; // Set counter to 0
 
-  #elif defined( __AVR_ATtinyX313__ )
+  #elif defined( __AVR_ATtiny2313__ ) || defined( __AVR_ATtiny2313A__ ) || defined( __AVR_ATtiny4313__ )
 
     /*
     Timer 1 is used with a ATtiny2313. 
@@ -318,7 +339,8 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     TIMSK |= _BV(OCIE1B); // Turn on interrupt
     TCNT1 = 0; // Set counter to 0
 
-  #elif defined( __AVR_ATtiny84__ )
+
+  #elif defined( __AVR_ATtiny24__ ) || defined( __AVR_ATtiny24A__ ) || defined( __AVR_ATtiny44__ ) || defined( __AVR_ATtiny44A__ ) || defined( __AVR_ATtiny84__ ) || defined( __AVR_ATtiny84A__ )
 
     /*
     Timer 1 is used with a ATtiny84. 
@@ -353,7 +375,8 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 1953.125
     OCR3A is 16 bit register
     */
-    
+    TCCR3A = 0;         // 2016, added, make it work for Leonardo
+    TCCR3B = 0;         // 2016, added, make it work for Leonardo
     TCCR3B = _BV(WGM32) | _BV(CS31); // 1/8 prescaler
     #if F_CPU == 1000000UL
       OCR3A = (64 >> speedFactor) - 1; 
@@ -494,11 +517,15 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
   }
 }
 
-#if defined( __AVR_ATtinyX5__ )
+
+
+#if defined( ESP8266 )
+void ICACHE_RAM_ATTR timer0_ISR (void)
+#elif defined( __AVR_ATtiny25__ ) || defined( __AVR_ATtiny45__ ) || defined( __AVR_ATtiny85__ )
 ISR(TIMER1_COMPA_vect)
-#elif defined( __AVR_ATtinyX313__ )
+#elif defined( __AVR_ATtiny2313__ ) || defined( __AVR_ATtiny2313A__ ) || defined( __AVR_ATtiny4313__ )
 ISR(TIMER1_COMPB_vect)
-#elif defined( __AVR_ATtiny84__ )
+#elif defined( __AVR_ATtiny24__ ) || defined( __AVR_ATtiny24A__ ) || defined( __AVR_ATtiny44__ ) || defined( __AVR_ATtiny44A__ ) || defined( __AVR_ATtiny84__ ) || defined( __AVR_ATtiny84A__ )
 ISR(TIM1_COMPA_vect)
 #elif defined(__AVR_ATmega32U4__)
 ISR(TIMER3_COMPA_vect)
@@ -618,6 +645,9 @@ ISR(TIMER2_COMPA_vect)
     // Get ready for next loop
     rx_last_sample = rx_sample;
   }
+#if defined( ESP8266 )
+  timer0_write(ESP.getCycleCount() + ESPtimer);
+#endif
 }
 
 Manchester man;
