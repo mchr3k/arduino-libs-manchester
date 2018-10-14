@@ -25,7 +25,9 @@ The data rate is then 600 bits/s.
 */
 
 #include "Manchester.h"
-
+#if defined ( ESP32 )
+hw_timer_t * timer = NULL;
+#endif
 static int8_t RxPin = 255;
 
 static int16_t rx_sample = 0;
@@ -78,11 +80,13 @@ void Manchester::setupTransmit(uint8_t pin, uint8_t SF)
     uint16_t compensationFactor = 88; //must be divisible by 8 for workaround
   #elif F_CPU == 8000000UL
     uint16_t compensationFactor = 12; 
-  #else //16000000Mhz
+  #elif F_CPU == 160000000UL
     uint16_t compensationFactor = 4; 
+  #elif F_CPU == 240000000UL
+    uint16_t compensationFactor = 2; 
   #endif  
 
-#if (F_CPU == 80000000UL) || (F_CPU == 160000000)   // ESP8266 80MHz or 160 MHz
+#if (F_CPU == 80000000UL) || (F_CPU == 160000000) || (F_CPU == 240000000)    // ESP8266 80MHz or 160 MHz
   delay1 = delay2 = (HALF_BIT_INTERVAL >> speedFactor) - 2;
 #else
   delay1 = (HALF_BIT_INTERVAL >> speedFactor) - compensationFactor;
@@ -264,7 +268,7 @@ void Manchester::stopReceive(void)
 
 //global functions
 
-#if defined( ESP8266 )
+#if defined( ESP8266 ) || defined( ESP32 )
    volatile uint16_t ESPtimer = 0;
    void timer0_ISR (void);
 #endif
@@ -274,17 +278,35 @@ void MANRX_SetupReceive(uint8_t speedFactor)
   pinMode(RxPin, INPUT);
   //setup timers depending on the microcontroller used
 
-  #if defined( ESP8266 )
+  #if defined( ESP8266 ) || defined ( ESP32 )
    #if F_CPU == 80000000
       ESPtimer = (512 >> speedFactor) * 80;  // 8MHZ, 300us for MAN_300, 128us for MAN_1200
    #elif F_CPU == 160000000
       ESPtimer = (512 >> speedFactor) * 160;
+   #elif F_CPU == 240000000
+      ESPtimer = 128;
    #endif
+  #endif
 
+  #if defined( ESP8266 )
    noInterrupts();
    timer0_isr_init();
    timer0_attachInterrupt(timer0_ISR);
    timer0_write(ESP.getCycleCount() + ESPtimer); //80Mhz -> 128us
+   interrupts();
+  #elif defined ( ESP32 )
+   noInterrupts();
+   #if F_CPU == 240000000
+    timer = timerBegin(0, 80, true);
+   #else
+    #error Only 240MHz is supported for ESP32. See line above and add an elif for your custom frequency.
+   #endif
+
+   timerAttachInterrupt(timer, &timer0_ISR, true);
+   timerAlarmWrite(timer, ESPtimer, true);
+   timerAlarmEnable(timer);
+   timerStart(timer);
+
    interrupts();
   #elif defined( __AVR_ATtiny25__ ) || defined( __AVR_ATtiny45__ ) || defined( __AVR_ATtiny85__ )
 
@@ -349,7 +371,7 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     OCR1A is 8 bit register
     */
 
-	TCCR1A = 0;
+  TCCR1A = 0;
 
     #if F_CPU == 1000000UL
       TCCR1B = _BV(WGM12) | _BV(CS11); // 1/8 prescaler
@@ -507,7 +529,7 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
 
     // added by caoxp @ https://github.com/caoxp
     // compatible with unfixed-length data, with the data length defined by the first byte.
-	// at a maximum of 255 total data length.
+  // at a maximum of 255 total data length.
     if( (*curByte) == 1)
     {
       rx_maxBytes = data[0];
@@ -519,8 +541,10 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
 
 
 
-#if defined( ESP8266 )
+#if defined( ESP8266 ) 
 void ICACHE_RAM_ATTR timer0_ISR (void)
+#elif defined ( ESP32 )
+void IRAM_ATTR timer0_ISR(void)
 #elif defined( __AVR_ATtiny25__ ) || defined( __AVR_ATtiny45__ ) || defined( __AVR_ATtiny85__ )
 ISR(TIMER1_COMPA_vect)
 #elif defined( __AVR_ATtiny2313__ ) || defined( __AVR_ATtiny2313A__ ) || defined( __AVR_ATtiny4313__ )
@@ -533,6 +557,7 @@ ISR(TIMER3_COMPA_vect)
 ISR(TIMER2_COMPA_vect)
 #endif
 {
+  
   if (rx_mode < RX_MODE_MSG) //receiving something
   {
     // Increment counter
@@ -647,6 +672,8 @@ ISR(TIMER2_COMPA_vect)
   }
 #if defined( ESP8266 )
   timer0_write(ESP.getCycleCount() + ESPtimer);
+#elif defined ( ESP32 )
+  timerAlarmWrite(timer, ESPtimer, true);
 #endif
 }
 
