@@ -43,7 +43,7 @@ static uint8_t rx_curByte = 0;
 static uint8_t rx_maxBytes = 2;
 static uint8_t rx_default_data[2];
 static uint8_t* rx_data = rx_default_data;
-
+static void (*rcvCallback)(void);
 Manchester::Manchester() //constructor
 {
   applyWorkAround1Mhz = 0;
@@ -238,6 +238,9 @@ uint16_t Manchester::encodeMessage(uint8_t id, uint8_t data)
   return m;
 }
 
+void Manchester::setReceiveCallback(void(*receiveCallback)(void)) {
+  rcvCallback=receiveCallback;
+}
 void Manchester::beginReceiveArray(uint8_t maxBytes, uint8_t *data)
 {
   ::MANRX_BeginReceiveBytes(maxBytes, data);
@@ -656,6 +659,8 @@ ISR(TIMER2_COMPA_vect)
               (rx_curByte >= rx_maxBytes))
           {
             rx_mode = RX_MODE_MSG;
+            if(rcvCallback!=NULL)
+              rcvCallback();
           }
           else
           {
