@@ -487,6 +487,7 @@ void MANRX_BeginReceiveBytes(uint8_t maxBytes, uint8_t *data)
 
 void MANRX_StopReceive(void)
 {
+  timerDetachInterrupt(timer);
   rx_mode = RX_MODE_IDLE;
 }
 
