@@ -68,9 +68,9 @@ allowing us to transmit even with up to 100% in clock speed difference
 //  consider the pulses rising when starting transmitting.
 //  SYNC_PULSE_MIN should be much less than SYNC_PULSE_DEF
 //  all maximum of 255
-#define     SYNC_PULSE_MIN  1
-#define     SYNC_PULSE_DEF  3
-#define     SYNC_PULSE_MAX  5
+#define     SYNC_PULSE_MIN  2
+#define     SYNC_PULSE_DEF  4
+#define     SYNC_PULSE_MAX  6
 
 //#define       SYNC_PULSE_MIN  10
 //#define       SYNC_PULSE_DEF  14
@@ -88,14 +88,14 @@ allowing us to transmit even with up to 100% in clock speed difference
 
 
 /*
-	Signal timing, we take sample every 8 clock ticks
-	
-	ticks:   [0]-[8]--[16]-[24]-[32]-[40]-[48]-[56]-[64]-[72]-[80]-[88]-[96][104][112][120][128][136]
-	samples: |----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
-	single:  |                    [--------|----------]
-	double:  |                                         [-----------------|--------------------]
-	signal:  |_____________________________                               ______________________
-	         |                             |_____________________________|
+  Signal timing, we take sample every 8 clock ticks
+  
+  ticks:   [0]-[8]--[16]-[24]-[32]-[40]-[48]-[56]-[64]-[72]-[80]-[88]-[96][104][112][120][128][136]
+  samples: |----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|----|
+  single:  |                    [--------|----------]
+  double:  |                                         [-----------------|--------------------]
+  signal:  |_____________________________                               ______________________
+           |                             |_____________________________|
 
 */
 
@@ -148,6 +148,7 @@ class Manchester
     
     //wrappers for global functions
     void beginReceive(void);
+    void setReceiveCallback(void(*receiveCallback)(void));
     void beginReceiveArray(uint8_t maxBytes, uint8_t *data);
     uint8_t receiveComplete(void);
     uint8_t getMessage(void);
