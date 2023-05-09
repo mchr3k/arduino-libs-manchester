@@ -28,11 +28,11 @@ The data rate is then 600 bits/s.
 
 static int8_t RxPin = 255;
 
-static int16_t rx_sample = 0;
-static int16_t rx_last_sample = 0;
-static uint8_t rx_count = 0;
-static uint8_t rx_sync_count = 0;
-static uint8_t rx_mode = RX_MODE_IDLE;
+volatile static int16_t rx_sample = 0;
+volatile static int16_t rx_last_sample = 0;
+volatile static uint8_t rx_count = 0;
+volatile static uint8_t rx_sync_count = 0;
+volatile static uint8_t rx_mode = RX_MODE_IDLE;
 
 static uint16_t rx_manBits = 0; //the received manchester 32 bits
 static uint8_t rx_numMB = 0; //the number of received manchester bits
