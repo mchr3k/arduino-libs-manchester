@@ -1,1 +1,1 @@
-Full details available on the [Arduino Manchester Encoding site](http://mchr3k.github.com/arduino-libs-manchester/)
+Full details available on the [Arduino Manchester Encoding site](https://mchr3k.github.io/arduino-libs-manchester/)
